@@ -456,3 +456,128 @@ export function parseImportedState(rawJson: string): { ok: true; state: AppState
     return { ok: false, error: err instanceof Error ? err.message : 'Malformed JSON' };
   }
 }
+
+export interface TaxHeadSummary {
+  area: string;
+  shortLabel: string;
+  topicsCount: number;
+  attemptedTopics: number;
+  masteredTopics: number;
+  averageMastery: number;
+  questionCount: number;
+  weakestTopicId: number;
+  weakestTopicTitle: string;
+}
+
+const TAX_HEAD_ORDER: { area: string; shortLabel: string }[] = [
+  { area: 'Income Tax & NIC', shortLabel: 'Income Tax & NIC' },
+  { area: 'Corporation Tax', shortLabel: 'Corporation Tax' },
+  { area: 'Chargeable Gains', shortLabel: 'Capital Gains (CGT)' },
+  { area: 'Inheritance Tax', shortLabel: 'Inheritance Tax' },
+  { area: 'VAT', shortLabel: 'Value Added Tax' },
+  { area: 'UK Tax System', shortLabel: 'Tax System & Ethics' },
+];
+
+export function computeTaxHeadSummaries(state: AppState): TaxHeadSummary[] {
+  return TAX_HEAD_ORDER.map(({ area, shortLabel }) => {
+    const areaTopics = TOPICS.filter((t) => t.syllabusArea === area);
+    const questionCount = areaTopics.reduce((s, t) => s + t.extractedCount, 0);
+    const attempted = areaTopics.filter((t) => (state.topicProgress[t.id]?.attempts ?? 0) > 0);
+    const mastered = areaTopics.filter((t) => state.topicProgress[t.id]?.rag === 'green');
+    const averageMastery =
+      areaTopics.length > 0
+        ? Math.round(
+            areaTopics.reduce((s, t) => s + (state.topicProgress[t.id]?.mastery ?? 0), 0) /
+              areaTopics.length
+          )
+        : 0;
+
+    const weakest = [...areaTopics].sort((a, b) => {
+      const ma = state.topicProgress[a.id]?.mastery ?? 0;
+      const mb = state.topicProgress[b.id]?.mastery ?? 0;
+      if (ma !== mb) return ma - mb;
+      return b.phase1.frequencyCount - a.phase1.frequencyCount;
+    })[0];
+
+    return {
+      area,
+      shortLabel,
+      topicsCount: areaTopics.length,
+      attemptedTopics: attempted.length,
+      masteredTopics: mastered.length,
+      averageMastery,
+      questionCount,
+      weakestTopicId: weakest?.id ?? 1,
+      weakestTopicTitle: weakest?.title ?? area,
+    };
+  });
+}
+
+export interface RecommendedStudyAction {
+  kind: 'micro_drill' | 'srs' | 'weak_topic' | 'specimen_mock';
+  kicker: string;
+  title: string;
+  detail: string;
+  ctaLabel: string;
+  topicId?: number;
+  trapCategory?: string;
+  questionId?: string;
+}
+
+export function getRecommendedNextAction(
+  state: AppState,
+  nowIso = new Date().toISOString()
+): RecommendedStudyAction {
+  const flaggedTrap = Object.values(state.trapLedger)
+    .filter((t) => t.microDrillRequired || t.hitCount >= 2)
+    .sort((a, b) => b.hitCount - a.hitCount)[0];
+
+  if (flaggedTrap) {
+    return {
+      kind: 'micro_drill',
+      kicker: 'Priority Trap Intervention',
+      title: `Clear repeat trap: ${flaggedTrap.trapCategory}`,
+      detail: `${flaggedTrap.hitCount} hits logged. Complete a focused 2-question trap drill to restore immunity before timed mocks.`,
+      ctaLabel: 'Launch 2-Q Trap Drill',
+      trapCategory: flaggedTrap.trapCategory,
+    };
+  }
+
+  const due = getDueMistakes(state.mistakes, nowIso);
+  if (due.length > 0) {
+    const first = due[0];
+    return {
+      kind: 'srs',
+      kicker: `${due.length} Spaced-Repetition ${due.length === 1 ? 'Review' : 'Reviews'} Due`,
+      title: `Re-drill ${first.questionId} (${first.topicName})`,
+      detail: `Clearing due 1/3/7-day reviews locks rules into long-term memory ahead of exam day.`,
+      ctaLabel: 'Clear Due Mistake',
+      questionId: first.questionId,
+    };
+  }
+
+  const predictions = computeExamPredictions(state);
+  const top = predictions[0];
+  if (state.attempts.length >= 15 && state.mockHistory.length === 0) {
+    return {
+      kind: 'specimen_mock',
+      kicker: 'Benchmark Check',
+      title: 'Sit the Full 100-Mark Specimen CBE Mock',
+      detail: 'Test pacing at 1.8 min/mark across Sections A, B, and C to establish a true baseline score.',
+      ctaLabel: 'Start Specimen Mock',
+    };
+  }
+
+  return {
+    kind: 'weak_topic',
+    kicker: `Highest Yield · ${top.frequencyOutOf8}/8 Past Sittings`,
+    title: `Topic ${top.topicId}: ${top.title}`,
+    detail:
+      top.mastery === 0
+        ? 'Unstarted high-frequency core syllabus area. Review the Phase-1 snapshot and drill Section A OTs.'
+        : `Current mastery ${top.mastery}%. Push past 80% and pass Tier-3 Sec B/C cases.`,
+    ctaLabel: `Open Topic ${top.topicId}`,
+    topicId: top.topicId,
+  };
+}
+

@@ -8,6 +8,18 @@ interface TaxTablesContentProps {
   compact?: boolean;
 }
 
+const QUICK_TAGS = [
+  'Income Tax',
+  'NIC',
+  'Capital Allowances',
+  'Corporation Tax',
+  'CGT',
+  'IHT',
+  'VAT',
+  'RDE2',
+  'POA',
+];
+
 export const TaxTablesContent: React.FC<TaxTablesContentProps> = ({ compact = false }) => {
   const [query, setQuery] = useState('');
   const [sectionView, setSectionView] = useState<'all' | 'rates' | 'dates'>('all');
@@ -43,56 +55,95 @@ export const TaxTablesContent: React.FC<TaxTablesContentProps> = ({ compact = fa
   }, [qLower]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter FA25 rates, allowances, thresholds, or deadlines (e.g. RDE2, 100,000, POA)..."
-            className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
-          />
+    <div className="space-y-5">
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter FA25 rates, allowances, thresholds, or deadlines (e.g. RDE2, 100,000, POA)..."
+              className="w-full rounded-xl border border-[#D8D4C8] bg-white py-2 pl-9 pr-3 text-sm text-[#14171A] placeholder:text-neutral-400 focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#12161D] dark:text-[#F0F3F6]"
+            />
+          </div>
+
+          <div className="inline-flex rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-1 dark:border-[#262C36] dark:bg-[#12161D]">
+            {(['all', 'rates', 'dates'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setSectionView(tab)}
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  sectionView === tab
+                    ? 'bg-[#0F5132] text-white dark:bg-emerald-600'
+                    : 'text-neutral-600 hover:text-[#14171A] dark:text-neutral-300'
+                }`}
+              >
+                {tab === 'all' ? 'All Tables' : tab === 'rates' ? 'Rates (P.37–42)' : 'Time Limits (P.43+)'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="inline-flex rounded-md border border-slate-200 bg-slate-100 p-0.5">
-          {(['all', 'rates', 'dates'] as const).map((tab) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {QUICK_TAGS.map((tag) => {
+            const active = query.toLowerCase() === tag.toLowerCase();
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setQuery(active ? '' : tag)}
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  active
+                    ? 'bg-[#0F5132] text-white dark:bg-emerald-600'
+                    : 'bg-white border border-[#E6E4DD] text-neutral-600 hover:bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#161B22] dark:text-neutral-300'
+                }`}
+              >
+                {tag}
+              </button>
+            );
+          })}
+          {query && (
             <button
-              key={tab}
               type="button"
-              onClick={() => setSectionView(tab)}
-              className={`whitespace-nowrap rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
-                sectionView === tab
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              onClick={() => setQuery('')}
+              className="px-2 py-1 text-xs font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
             >
-              {tab === 'all' ? 'All Tables' : tab === 'rates' ? 'Rates (P.37–42)' : 'Time Limits (P.43+)'}
+              Clear
             </button>
-          ))}
+          )}
         </div>
       </div>
 
       {(sectionView === 'all' || sectionView === 'rates') && (
         <div className={compact ? 'space-y-4' : 'grid grid-cols-1 gap-5 lg:grid-cols-2'}>
           {filteredRates.map((tbl) => (
-            <div key={tbl.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5">
-                <h3 className="font-display text-sm font-bold text-slate-900">{tbl.title}</h3>
-                <span className="font-mono text-xs text-slate-500">{tbl.kitPage}</span>
+            <div
+              key={tbl.id}
+              className="overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]"
+            >
+              <div className="flex items-center justify-between border-b border-[#EFECE4] bg-[#FAF9F6] px-4 py-3 dark:border-[#262C36] dark:bg-[#12161D]">
+                <h3 className="font-display text-sm font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                  {tbl.title}
+                </h3>
+                <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
+                  {tbl.kitPage}
+                </span>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
                 {tbl.rows.map((row, idx) => (
-                  <div
-                    key={idx}
-                    className="grid grid-cols-12 items-start gap-2 px-4 py-2.5 text-sm"
-                  >
-                    <div className="col-span-5 font-medium text-slate-800">{row.item}</div>
-                    <div className="col-span-4 font-mono text-xs font-semibold text-blue-800 tabular-nums">
+                  <div key={idx} className="grid grid-cols-12 items-start gap-2 px-4 py-2.5 text-sm">
+                    <div className="col-span-5 font-medium text-[#14171A] dark:text-[#F0F3F6]">
+                      {row.item}
+                    </div>
+                    <div className="col-span-4 font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400 tabular-nums">
                       {row.rateOrLimit}
                     </div>
-                    <div className="col-span-3 text-xs text-slate-500">{row.note ?? ''}</div>
+                    <div className="col-span-3 text-xs text-neutral-500 dark:text-neutral-400">
+                      {row.note ?? ''}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -104,22 +155,33 @@ export const TaxTablesContent: React.FC<TaxTablesContentProps> = ({ compact = fa
       {(sectionView === 'all' || sectionView === 'dates') && (
         <div className={compact ? 'space-y-4' : 'grid grid-cols-1 gap-5 lg:grid-cols-2'}>
           {filteredDates.map((card) => (
-            <div key={card.area} className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2.5">
-                <h3 className="font-display text-sm font-bold text-slate-900">{card.area}</h3>
-                <span className="font-mono text-xs text-slate-500">{card.kitPage}</span>
+            <div
+              key={card.area}
+              className="overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]"
+            >
+              <div className="flex items-center justify-between border-b border-[#EFECE4] bg-[#FAF9F6] px-4 py-3 dark:border-[#262C36] dark:bg-[#12161D]">
+                <h3 className="font-display text-sm font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                  {card.area}
+                </h3>
+                <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
+                  {card.kitPage}
+                </span>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
                 {card.items.map((it, idx) => (
-                  <div key={idx} className="px-4 py-2.5 text-sm">
+                  <div key={idx} className="px-4 py-3 text-sm">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium text-slate-900">{it.action}</span>
-                      <span className="font-mono text-xs font-semibold text-teal-700 tabular-nums">
+                      <span className="font-medium text-[#14171A] dark:text-[#F0F3F6]">
+                        {it.action}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400 tabular-nums">
                         {it.deadline}
                       </span>
                     </div>
                     {it.example2526 && (
-                      <p className="mt-1 text-xs text-slate-500">2025/26 example: {it.example2526}</p>
+                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                        2025/26 example: {it.example2526}
+                      </p>
                     )}
                   </div>
                 ))}
@@ -128,13 +190,14 @@ export const TaxTablesContent: React.FC<TaxTablesContentProps> = ({ compact = fa
           ))}
         </div>
       )}
+
       {filteredRates.length === 0 && filteredDates.length === 0 && (
-        <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-xs text-slate-600">
+        <div className="rounded-2xl border border-[#E6E4DD] bg-white p-6 text-center text-xs text-neutral-600 dark:border-[#262C36] dark:bg-[#161B22] dark:text-neutral-400">
           No FA25 tax rates or time limits match &ldquo;{query}&rdquo;.{' '}
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="font-semibold text-blue-700 hover:underline"
+            className="font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
           >
             Clear filter
           </button>
@@ -196,13 +259,13 @@ export const TaxTablesView: React.FC<TaxTablesViewProps> = ({ appState, onImport
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#E6E4DD] bg-white p-5 sm:flex-row sm:items-center sm:justify-between dark:border-[#262C36] dark:bg-[#161B22]">
         <div>
-          <h1 className="font-display text-xl font-bold text-slate-900">
-            FA25 Tax Rates, Allowances & Election Deadlines
+          <h1 className="font-display text-2xl font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+            FA25 Tax Rates, Allowances &amp; Election Deadlines
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Canonical reference extracted directly from Kaplan TX-UK FA25 Exam Kit P.37–46 (2025/26 tax year).
+          <p className="mt-1 text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
+            Canonical reference extracted from Kaplan TX-UK FA25 Exam Kit P.37–46 (2025/26 tax year).
           </p>
         </div>
 
@@ -210,13 +273,13 @@ export const TaxTablesView: React.FC<TaxTablesViewProps> = ({ appState, onImport
           <button
             type="button"
             onClick={handleExportJson}
-            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-3 py-2 text-xs font-semibold text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
           >
             <Download className="h-3.5 w-3.5" />
             Save Backup JSON
           </button>
 
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-3 py-2 text-xs font-semibold text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200">
             <Upload className="h-3.5 w-3.5" />
             Restore Backup JSON
             <input type="file" accept="application/json" onChange={handleFileUpload} className="hidden" />
@@ -225,7 +288,7 @@ export const TaxTablesView: React.FC<TaxTablesViewProps> = ({ appState, onImport
           <button
             type="button"
             onClick={() => setShowImportBox((v) => !v)}
-            className="inline-flex items-center rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            className="inline-flex items-center rounded-lg border border-[#D8D4C8] bg-white px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
           >
             Paste JSON
           </button>
@@ -233,33 +296,35 @@ export const TaxTablesView: React.FC<TaxTablesViewProps> = ({ appState, onImport
       </div>
 
       {statusMessage && (
-        <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-900">
+        <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/70 px-4 py-2.5 text-sm font-medium text-[#0F5132] dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
           {statusMessage}
         </div>
       )}
 
       {showImportBox && (
-        <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
-          <p className="text-xs font-semibold text-slate-700">Paste previously exported TX Mastercoach JSON:</p>
+        <div className="rounded-2xl border border-[#E6E4DD] bg-white p-4 space-y-3 dark:border-[#262C36] dark:bg-[#161B22]">
+          <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+            Paste previously exported TX Mastercoach JSON:
+          </p>
           <textarea
             rows={4}
             value={pasteJson}
             onChange={(e) => setPasteJson(e.target.value)}
-            className="w-full rounded-md border border-slate-300 p-2 font-mono text-xs text-slate-900 focus:border-blue-600 focus:outline-none"
+            className="w-full rounded-xl border border-[#D8D4C8] bg-[#FAF9F6] p-2.5 font-mono text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
             placeholder='{"version": 1, ...}'
           />
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setShowImportBox(false)}
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handlePasteImport}
-              className="rounded-md bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
+              className="rounded-lg bg-[#0F5132] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
             >
               Restore State
             </button>
@@ -280,19 +345,22 @@ interface TaxTablesDrawerProps {
 export const TaxTablesDrawer: React.FC<TaxTablesDrawerProps> = ({ open, onClose }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-[1px]">
-      <div className="flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[1px]">
+      <div className="flex h-full w-full max-w-2xl flex-col bg-[#F7F6F2] shadow-2xl dark:bg-[#0D1117]">
+        <div className="flex items-center justify-between border-b border-[#E6E4DD] bg-white px-5 py-4 dark:border-[#262C36] dark:bg-[#161B22]">
           <div>
-            <h2 className="font-display text-base font-bold text-slate-900">
-              FA25 Exam Tables & Deadlines (Kit P.37–46)
+            <h2 className="font-display text-base font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+              FA25 Exam Tables &amp; Deadlines (Kit P.37–46)
             </h2>
-            <p className="text-xs text-slate-500">Provided inside the ACCA CBE workspace</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Provided inside the ACCA CBE workspace
+            </p>
           </div>
           <button
             type="button"
+            aria-label="Close exam tables"
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E6E4DD] text-neutral-600 hover:bg-neutral-100 dark:border-[#262C36] dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             <X className="h-4 w-4" />
           </button>

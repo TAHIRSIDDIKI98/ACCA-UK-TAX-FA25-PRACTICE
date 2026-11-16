@@ -1,67 +1,49 @@
 import React, { useMemo, useState } from 'react';
 import {
-  AlertTriangle,
   ArrowRight,
   Calendar,
   CheckCircle2,
-  FileText,
   Flame,
   ShieldCheck,
   Target,
-  Upload,
 } from 'lucide-react';
-import {
-  EXAM_CARD,
-  KIT_INDEX_SUMMARY,
-  TOPICS,
-} from '../data/taxReference';
+import { EXAM_CARD, KIT_INDEX_SUMMARY, TOPICS } from '../data/taxReference';
 import {
   computeExamPredictions,
   computeFreeMarksHarvestPercent,
   computeOverallReadiness,
   computeStudyPlanDays,
+  computeTaxHeadSummaries,
   computeTrapImmunityPercent,
   getDueMistakes,
+  getRecommendedNextAction,
 } from '../engine/mastery';
-import type { AppState, RagStatus, UserProfile } from '../types/tx';
+import type { AppState, RagStatus } from '../types/tx';
 import { TrapLedgerDashboard } from './TrapLedgerDashboard';
 
 interface DashboardViewProps {
   appState: AppState;
   totalQuestionsLoaded: number;
   specimenItemCount: number;
-  onSaveProfile: (profile: UserProfile) => void;
   onSelectTopic: (topicId: number) => void;
   onLaunchSpecimenMock: () => void;
   onOpenDueMistakes: () => void;
   onOpenTrapLedgerTab: () => void;
   onLaunchMicroDrill: (trapCategory: string) => void;
   onOpenQuestionById: (qId: string) => void;
-  onStudyTextUploaded: (name: string) => void;
+  onOpenMockTab: () => void;
 }
 
-function getRagLabel(rag: RagStatus): { text: string; textClass: string } {
+function getRagStatusCopy(rag: RagStatus): { label: string; colorClass: string } {
   switch (rag) {
     case 'green':
-      return {
-        text: 'Green · Pass Ready',
-        textClass: 'text-teal-700',
-      };
+      return { label: 'Pass Ready', colorClass: 'text-[#0F5132] dark:text-emerald-400' };
     case 'amber':
-      return {
-        text: 'Amber · Developing',
-        textClass: 'text-amber-700',
-      };
+      return { label: 'Developing', colorClass: 'text-amber-700 dark:text-amber-400' };
     case 'red':
-      return {
-        text: 'Red · Needs Drill',
-        textClass: 'text-red-700',
-      };
+      return { label: 'Needs Drill', colorClass: 'text-red-700 dark:text-red-400' };
     default:
-      return {
-        text: 'Unstarted',
-        textClass: 'text-slate-500',
-      };
+      return { label: 'Unstarted', colorClass: 'text-neutral-500 dark:text-neutral-400' };
   }
 }
 
@@ -69,325 +51,301 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   appState,
   totalQuestionsLoaded,
   specimenItemCount,
-  onSaveProfile,
   onSelectTopic,
   onLaunchSpecimenMock,
   onOpenDueMistakes,
   onOpenTrapLedgerTab,
   onLaunchMicroDrill,
   onOpenQuestionById,
-  onStudyTextUploaded,
+  onOpenMockTab,
 }) => {
-  const [editingProfile, setEditingProfile] = useState(!appState.profile.onboarded);
-  const [draftProfile, setDraftProfile] = useState<UserProfile>(appState.profile);
   const [showBattleCard, setShowBattleCard] = useState(false);
-  const [areaFilter, setAreaFilter] = useState<string>('ALL');
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  const [kitLookupQ, setKitLookupQ] = useState('128');
-  const [kitLookupResult, setKitLookupResult] = useState<string | null>(null);
+  const [expandedArea, setExpandedArea] = useState<string | null>(null);
+  const [showCoverageTable, setShowCoverageTable] = useState(false);
 
   const readiness = useMemo(() => computeOverallReadiness(appState), [appState]);
   const trapImmunity = useMemo(() => computeTrapImmunityPercent(appState), [appState]);
   const freeMarksHarvest = useMemo(() => computeFreeMarksHarvestPercent(appState), [appState]);
   const dueMistakes = useMemo(() => getDueMistakes(appState.mistakes), [appState.mistakes]);
   const predictions = useMemo(() => computeExamPredictions(appState), [appState]);
-  const planInfo = useMemo(
-    () => computeStudyPlanDays(appState.profile, appState),
-    [appState]
-  );
+  const planInfo = useMemo(() => computeStudyPlanDays(appState.profile, appState), [appState]);
+  const taxHeadSummaries = useMemo(() => computeTaxHeadSummaries(appState), [appState]);
+  const recommended = useMemo(() => getRecommendedNextAction(appState), [appState]);
 
-  const filteredTopics = useMemo(() => {
-    if (areaFilter === 'ALL') return TOPICS;
-    return TOPICS.filter((t) => t.syllabusArea === areaFilter);
-  }, [areaFilter]);
-
-  const handleProfileSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSaveProfile({ ...draftProfile, onboarded: true });
-    setEditingProfile(false);
-  };
-
-  const handleStudyTextFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadStatus('Reading PDF metadata...');
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const res = await fetch('/api/study-text/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileName: file.name,
-            base64Data: String(reader.result ?? ''),
-          }),
-        });
-        const json = await res.json();
-        if (json.ok) {
-          onStudyTextUploaded(file.name);
-          setUploadStatus(
-            `Attached ${file.name} (${json.studyText.pageCount} pages).`
-          );
-        } else {
-          setUploadStatus(json.error || 'Could not parse Study Text PDF.');
-        }
-      } catch {
-        onStudyTextUploaded(file.name);
-        setUploadStatus(`Attached locally: ${file.name}.`);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleKitLookup = async () => {
-    setKitLookupResult('Searching Exam Kit PDF...');
-    try {
-      const res = await fetch(`/api/kit/lookup?q=${encodeURIComponent(kitLookupQ)}`);
-      const data = await res.json();
-      if (data.ok) {
-        setKitLookupResult(
-          `Kit Q${data.qNum}${data.bookPage ? ` (Kit p.${data.bookPage})` : ''}: ${data.snippet}`
-        );
-      } else {
-        setKitLookupResult(data.error || 'Lookup failed');
-      }
-    } catch {
-      setKitLookupResult('Lookup endpoint unavailable.');
+  const handleRunRecommended = () => {
+    if (recommended.kind === 'micro_drill' && recommended.trapCategory) {
+      onLaunchMicroDrill(recommended.trapCategory);
+    } else if (recommended.kind === 'srs' && recommended.questionId) {
+      onOpenQuestionById(recommended.questionId);
+    } else if (recommended.kind === 'specimen_mock') {
+      onLaunchSpecimenMock();
+    } else if (recommended.topicId) {
+      onSelectTopic(recommended.topicId);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Compact Hero / Exam Header + Study Profile Onboarding */}
-      <section className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-8">
+      {/* 1. Focal Anchor Hero: Today's Study Mission + Unified Readiness Grid */}
+      <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
+        {/* Left: Primary Study Mission */}
+        <div className="flex flex-col justify-between rounded-2xl border border-[#E6E4DD] bg-white p-6 sm:p-7 lg:col-span-7 dark:border-[#262C36] dark:bg-[#161B22]">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase tracking-wider text-blue-700">
-              {EXAM_CARD.financeAct} · {EXAM_CARD.examWindow}
-            </p>
-            <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-slate-900">
-              {EXAM_CARD.paper}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+              <span className="font-mono font-semibold text-[#0F5132] dark:text-emerald-400">
+                {EXAM_CARD.financeAct}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span className="font-mono tabular-nums">{planInfo.daysUntilExam} days to sitting</span>
+              <span aria-hidden="true">·</span>
+              <span>{recommended.kicker}</span>
+            </div>
+
+            <h1 className="mt-3 font-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#14171A] dark:text-[#F0F3F6]">
+              {recommended.title}
             </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              {totalQuestionsLoaded} Exam Kit questions (Q1–Q306) · {specimenItemCount} Specimen CBE items (100 marks) · 1.8 min/mark budget · Target bank ≥60%
+            <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+              {recommended.detail}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
+          <div className="mt-6 flex flex-wrap items-center gap-3 pt-4 border-t border-[#EFECE4] dark:border-[#262C36]">
             <button
               type="button"
-              onClick={() => setShowBattleCard((v) => !v)}
-              className="whitespace-nowrap rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+              onClick={handleRunRecommended}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#0F5132] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
             >
-              {showBattleCard ? 'Hide Battle Card' : 'Battle Card'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditingProfile((v) => !v)}
-              className="whitespace-nowrap rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              {editingProfile ? 'Close Profile' : 'Study Profile'}
+              {recommended.ctaLabel}
+              <ArrowRight className="h-4 w-4" />
             </button>
             <button
               type="button"
               onClick={onLaunchSpecimenMock}
-              className="inline-flex whitespace-nowrap items-center gap-1.5 rounded-md bg-blue-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-800"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-3.5 py-2.5 text-xs font-semibold text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6] dark:hover:bg-[#242C38]"
             >
-              Sit Specimen Mock
-              <ArrowRight className="h-3.5 w-3.5" />
+              Sit 100m Specimen CBE
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBattleCard((v) => !v)}
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-neutral-600 hover:bg-[#EFECE4] hover:text-[#14171A] dark:text-neutral-300 dark:hover:bg-[#1C222B]"
+            >
+              {showBattleCard ? 'Hide Exam Battle Card' : 'Exam-Day Battle Card'}
             </button>
           </div>
         </div>
 
-        {/* Onboarding / Study Profile Form */}
-        {editingProfile && (
-          <form
-            onSubmit={handleProfileSubmit}
-            className="mt-5 grid grid-cols-1 gap-4 rounded-md border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-5"
-          >
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">
-                Target Exam Date
-              </label>
-              <input
-                type="date"
-                value={draftProfile.examDate}
-                onChange={(e) =>
-                  setDraftProfile({ ...draftProfile, examDate: e.target.value })
-                }
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900"
-              />
+        {/* Right: Unified 2x2 Readiness Telemetry Matrix (No nested floating boxes) */}
+        <div className="grid grid-cols-2 divide-x divide-y divide-[#EFECE4] rounded-2xl border border-[#E6E4DD] bg-white lg:col-span-5 dark:divide-[#262C36] dark:border-[#262C36] dark:bg-[#161B22]">
+          <div className="p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              <span>Readiness</span>
+              <Target className="h-4 w-4 text-[#0F5132] dark:text-emerald-400" />
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">
-                Sitting Type
-              </label>
-              <select
-                value={draftProfile.attemptType}
-                onChange={(e) =>
-                  setDraftProfile({
-                    ...draftProfile,
-                    attemptType: e.target.value as 'first' | 'resit',
-                  })
-                }
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900"
-              >
-                <option value="first">First-time attempt</option>
-                <option value="resit">Resit candidate</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">
-                Study Hours / Week
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={draftProfile.hoursPerWeek}
-                onChange={(e) =>
-                  setDraftProfile({
-                    ...draftProfile,
-                    hoursPerWeek: Number(e.target.value) || 8,
-                  })
-                }
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 tabular-nums"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">
-                Preferred Exam Order
-              </label>
-              <select
-                value={draftProfile.preferredSectionOrder}
-                onChange={(e) =>
-                  setDraftProfile({
-                    ...draftProfile,
-                    preferredSectionOrder: e.target.value as 'A-B-C' | 'C-B-A' | 'B-C-A',
-                  })
-                }
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900"
-              >
-                <option value="A-B-C">Section A → B → C</option>
-                <option value="C-B-A">Section C → B → A</option>
-                <option value="B-C-A">Section B → C → A</option>
-              </select>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <button
-                type="submit"
-                className="w-full rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-              >
-                Save & Build Study Plan
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Exam-Day Battle Card & Countdown */}
-        {(showBattleCard || planInfo.isCountdown) && (
-          <div className="mt-5 rounded-md border border-amber-200 bg-amber-50/50 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 pb-2.5">
-              <h2 className="font-display text-sm font-bold text-slate-900">
-                {planInfo.isCountdown
-                  ? `Final ${planInfo.daysUntilExam}-Day Countdown Mode Active`
-                  : 'Exam-Day Battle Card (3 Hours 10 Mins CBE)'}
-              </h2>
-              <span className="font-mono text-xs font-semibold text-amber-900 tabular-nums">
-                Order: {appState.profile.preferredSectionOrder} · 1.8 min/mark hard cap
-              </span>
-            </div>
-            <div className="mt-3 grid grid-cols-1 divide-y divide-amber-200/80 text-xs text-slate-800 md:grid-cols-3 md:divide-x md:divide-y-0">
-              <div className="pb-3 md:pb-0 md:pr-4">
-                <p className="font-bold text-slate-900">Section Timing Splits</p>
-                <p className="mt-1">Sec A (30m): 54 min (flag & move on at 3.5m).</p>
-                <p>Sec B (30m): 54 min (18 min per 5-OT case).</p>
-                <p>Sec C (40m): 72 min (18m for 10m; 27m per 15m CR).</p>
-              </div>
-              <div className="py-3 md:py-0 md:px-4">
-                <p className="font-bold text-slate-900">Free-Marks Checklist</p>
-                <p className="mt-1">1. Show &ldquo;0&rdquo; for every exempt/non-adjustable line.</p>
-                <p>2. Label (W1), (W2) — never put work in Scratch Pad.</p>
-                <p>3. Deduct PAYE at foot; full 4-digit year on dates.</p>
-              </div>
-              <div className="pt-3 md:pt-0 md:pl-4">
-                <p className="font-bold text-slate-900">Personal Watchlist</p>
-                <p className="mt-1">
-                  Top priority: {predictions[0]?.title} ({predictions[0]?.frequencyOutOf8}/8 sittings)
-                </p>
-                <p>
-                  Due SRS Reviews: {dueMistakes.length} items · Never leave any OT blank.
-                </p>
-              </div>
-            </div>
+            <p className="mt-3 font-mono text-3xl font-bold text-[#14171A] dark:text-[#F0F3F6] tabular-nums">
+              {readiness}%
+            </p>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Pass 50% · Target 60%+
+            </p>
           </div>
-        )}
+
+          <div className="p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              <span>Trap Immunity</span>
+              <ShieldCheck className="h-4 w-4 text-[#1E3A5F] dark:text-sky-400" />
+            </div>
+            <p className="mt-3 font-mono text-3xl font-bold text-[#14171A] dark:text-[#F0F3F6] tabular-nums">
+              {trapImmunity}%
+            </p>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              {Object.keys(appState.trapLedger).length} trap categories
+            </p>
+          </div>
+
+          <div className="p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              <span>Free Marks</span>
+              <CheckCircle2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <p className="mt-3 font-mono text-3xl font-bold text-[#14171A] dark:text-[#F0F3F6] tabular-nums">
+              {freeMarksHarvest}%
+            </p>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Zeros, headings &amp; W1
+            </p>
+          </div>
+
+          <div className="p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              <span>Streak &amp; SRS</span>
+              <Flame className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </div>
+            <p className="mt-3 font-mono text-3xl font-bold text-[#14171A] dark:text-[#F0F3F6] tabular-nums">
+              {appState.streakDays}d · {dueMistakes.length}
+            </p>
+            <button
+              type="button"
+              onClick={onOpenDueMistakes}
+              className="mt-1 text-left text-xs font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+            >
+              {dueMistakes.length > 0 ? 'Clear SRS queue →' : 'Open Mistake Bank →'}
+            </button>
+          </div>
+        </div>
       </section>
 
-      {/* 4 Core KPI Telemetry Cards */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Exam Readiness</span>
-            <Target className="h-4 w-4 text-blue-700" />
+      {/* Collapsible Exam-Day Battle Card */}
+      {showBattleCard && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 dark:border-amber-900/60 dark:bg-amber-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 pb-3 dark:border-amber-900/50">
+            <h2 className="font-display text-base font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+              {planInfo.isCountdown
+                ? `Final ${planInfo.daysUntilExam}-Day Exam Battle Card (8 December 2026)`
+                : 'Exam-Day Battle Card (3 Hours 10 Mins CBE)'}
+            </h2>
+            <span className="font-mono text-xs font-semibold text-amber-900 dark:text-amber-300 tabular-nums">
+              Order: {appState.profile.preferredSectionOrder} · 1.8 min/mark cap
+            </span>
           </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-slate-900 tabular-nums">
-            {readiness}%
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Pass mark 50% · Target bank 60%+
-          </p>
-        </div>
+          <div className="mt-3.5 grid grid-cols-1 gap-4 text-xs text-neutral-800 md:grid-cols-3 dark:text-neutral-200">
+            <div>
+              <p className="font-bold text-[#14171A] dark:text-white">Section Timing Splits</p>
+              <p className="mt-1">Sec A (30m): 54 min — flag &amp; move on at 3.5m.</p>
+              <p>Sec B (30m): 54 min — 18 min per 5-OT case.</p>
+              <p>Sec C (40m): 72 min — 18m (10m) &amp; 27m (15m CR).</p>
+            </div>
+            <div>
+              <p className="font-bold text-[#14171A] dark:text-white">Free-Marks Protocol</p>
+              <p className="mt-1">1. Show &ldquo;0&rdquo; for every exempt item.</p>
+              <p>2. Label (W1), (W2) inside marked response (not Scratch Pad).</p>
+              <p>3. Deduct PAYE at foot; write full 4-digit years.</p>
+            </div>
+            <div>
+              <p className="font-bold text-[#14171A] dark:text-white">Active Focus Watchlist</p>
+              <p className="mt-1">
+                #1 Yield: {predictions[0]?.title} ({predictions[0]?.frequencyOutOf8}/8 sittings)
+              </p>
+              <p>
+                Due SRS Reviews: {dueMistakes.length} items · Never leave any OT blank.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Trap Immunity</span>
-            <ShieldCheck className="h-4 w-4 text-teal-700" />
+      {/* 2. 6-Tax-Head Mastery Overview (Clean visual map replacing giant 24-row spreadsheet) */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+              Syllabus Mastery by Tax Head
+            </h2>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">
+              {totalQuestionsLoaded} Kaplan Exam Kit questions + {specimenItemCount} Specimen CBE items organized across the 6 ACCA TX-UK syllabus heads.
+            </p>
           </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-slate-900 tabular-nums">
-            {trapImmunity}%
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            {Object.keys(appState.trapLedger).length} trap categories tracked
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Free-Marks Harvest</span>
-            <CheckCircle2 className="h-4 w-4 text-amber-600" />
-          </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-slate-900 tabular-nums">
-            {freeMarksHarvest}%
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Zeros, headings, W1 labels & dates
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Streak & SRS Queue</span>
-            <Flame className="h-4 w-4 text-orange-600" />
-          </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-slate-900 tabular-nums">
-            {appState.streakDays}d · {dueMistakes.length} due
-          </p>
           <button
             type="button"
-            onClick={onOpenDueMistakes}
-            className="mt-1 text-xs font-semibold text-blue-700 hover:underline"
+            onClick={onOpenMockTab}
+            className="text-xs font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
           >
-            {dueMistakes.length > 0 ? 'Clear SRS queue now →' : 'View Mistake Bank →'}
+            Build Custom Area Mock →
           </button>
+        </div>
+
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {taxHeadSummaries.map((head) => {
+            const isExpanded = expandedArea === head.area;
+            const areaTopics = TOPICS.filter((t) => t.syllabusArea === head.area);
+            return (
+              <div
+                key={head.area}
+                className="flex flex-col justify-between rounded-2xl border border-[#E6E4DD] bg-white p-5 dark:border-[#262C36] dark:bg-[#161B22]"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-display text-base font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                        {head.shortLabel}
+                      </h3>
+                      <p className="mt-0.5 font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {head.topicsCount} {head.topicsCount === 1 ? 'topic' : 'topics'} · {head.questionCount} Kit Qs
+                      </p>
+                    </div>
+                    <span className="font-mono text-lg font-bold text-[#0F5132] dark:text-emerald-400 tabular-nums">
+                      {head.averageMastery}%
+                    </span>
+                  </div>
+
+                  {/* Clean progress rule */}
+                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#EFECE4] dark:bg-[#262C36]">
+                    <div
+                      className="h-full bg-[#0F5132] dark:bg-emerald-500 transition-all"
+                      style={{ width: `${Math.max(3, head.averageMastery)}%` }}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
+                    <span>
+                      {head.masteredTopics}/{head.topicsCount} green
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedArea(isExpanded ? null : head.area)}
+                      className="font-semibold text-[#14171A] hover:underline dark:text-neutral-200"
+                    >
+                      {isExpanded ? 'Hide topics' : `Show ${head.topicsCount} ${head.topicsCount === 1 ? 'topic' : 'topics'}`}
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-3 divide-y divide-[#EFECE4] border-t border-[#EFECE4] pt-2 dark:divide-[#262C36] dark:border-[#262C36]">
+                      {areaTopics.map((t) => {
+                        const tp = appState.topicProgress[t.id];
+                        const status = getRagStatusCopy(tp?.rag ?? 'unstarted');
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => onSelectTopic(t.id)}
+                            className="flex w-full items-center justify-between gap-2 py-2 text-left text-xs hover:bg-[#FAF9F6] dark:hover:bg-[#1C222B] px-1 rounded"
+                          >
+                            <span className="truncate font-medium text-[#14171A] dark:text-[#F0F3F6]">
+                              <span className="font-mono text-neutral-400 mr-1.5">
+                                {String(t.id).padStart(2, '0')}
+                              </span>
+                              {t.title}
+                            </span>
+                            <span className={`shrink-0 font-mono text-[11px] font-semibold tabular-nums ${status.colorClass}`}>
+                              {tp?.attempts ? `${tp.mastery}%` : status.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-[#EFECE4] flex items-center justify-between gap-2 dark:border-[#262C36]">
+                  <span className="truncate text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Next: {head.weakestTopicTitle}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onSelectTopic(head.weakestTopicId)}
+                    className="shrink-0 text-xs font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+                  >
+                    Revise →
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* Personal Trap Ledger Dashboard (categorized by repeat-offence frequency) */}
+      {/* 3. Personal Trap Ledger Summary */}
       <TrapLedgerDashboard
         appState={appState}
         compact
@@ -396,35 +354,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onOpenFullTrapBank={onOpenTrapLedgerTab}
       />
 
-      {/* Frequency Intelligence & Adaptive Study Plan */}
+      {/* 4. High-Yield Predictor & Countdown Plan + Key Sec C CR Launches */}
       <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
-        <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="font-display text-base font-bold text-slate-900">
+        <div className="flex flex-col rounded-2xl border border-[#E6E4DD] bg-white p-5 sm:p-6 dark:border-[#262C36] dark:bg-[#161B22]">
+          <div className="flex items-center justify-between border-b border-[#EFECE4] pb-3 dark:border-[#262C36]">
+            <h2 className="font-display text-lg font-semibold text-[#14171A] dark:text-[#F0F3F6]">
               High-Yield Priority Predictor
             </h2>
-            <span className="font-mono text-xs text-slate-500">Frequency × Mastery Gap</span>
+            <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
+              Frequency × Gap
+            </span>
           </div>
-          <div className="mt-2 divide-y divide-slate-100 flex-1">
+          <div className="mt-2 divide-y divide-[#EFECE4] flex-1 dark:divide-[#262C36]">
             {predictions.slice(0, 5).map((item) => {
-              const ragStatus = getRagLabel(item.rag);
+              const ragStatus = getRagStatusCopy(item.rag);
               return (
                 <div
                   key={item.topicId}
-                  className="flex items-center justify-between gap-3 py-2.5"
+                  className="flex items-center justify-between gap-3 py-3"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <button
                       type="button"
                       onClick={() => onSelectTopic(item.topicId)}
-                      className="text-left text-sm font-semibold text-slate-900 hover:text-blue-700"
+                      className="text-left text-sm font-semibold text-[#14171A] hover:text-[#0F5132] dark:text-[#F0F3F6] dark:hover:text-emerald-400"
                     >
                       {item.topicId}. {item.title}
                     </button>
-                    <p className="text-xs text-slate-500">{item.reason}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">{item.reason}</p>
                   </div>
-                  <span className={`shrink-0 whitespace-nowrap text-xs font-semibold ${ragStatus.textClass}`}>
-                    {ragStatus.text}
+                  <span className={`shrink-0 whitespace-nowrap font-mono text-xs font-semibold ${ragStatus.colorClass}`}>
+                    {ragStatus.label}
                   </span>
                 </div>
               );
@@ -432,280 +392,101 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="font-display text-base font-bold text-slate-900">
-              Adaptive Study Plan
-            </h2>
-            <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-slate-600 tabular-nums">
-              <Calendar className="h-3.5 w-3.5" />
-              {planInfo.daysUntilExam} {planInfo.daysUntilExam === 1 ? 'day' : 'days'} to {appState.profile.examDate}
-            </span>
+        <div className="flex flex-col justify-between rounded-2xl border border-[#E6E4DD] bg-white p-5 sm:p-6 dark:border-[#262C36] dark:bg-[#161B22]">
+          <div>
+            <div className="flex items-center justify-between border-b border-[#EFECE4] pb-3 dark:border-[#262C36]">
+              <h2 className="font-display text-lg font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                Countdown Study Roadmap
+              </h2>
+              <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-neutral-600 tabular-nums dark:text-neutral-300">
+                <Calendar className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" />
+                {planInfo.daysUntilExam}d to {appState.profile.examDate}
+              </span>
+            </div>
+            <div className="mt-3 divide-y divide-[#EFECE4] dark:divide-[#262C36]">
+              {planInfo.blocks.map((b) => (
+                <div key={b.phase} className="py-3 first:pt-1 last:pb-1">
+                  <p className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">{b.phase}</p>
+                  <p className="mt-0.5 text-xs text-neutral-600 leading-relaxed dark:text-neutral-400">
+                    {b.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-3 divide-y divide-slate-100 flex-1">
-            {planInfo.blocks.map((b) => (
-              <div key={b.phase} className="py-2.5 first:pt-0 last:pb-0">
-                <p className="text-xs font-bold text-slate-900">{b.phase}</p>
-                <p className="mt-0.5 text-xs text-slate-600 leading-relaxed">{b.detail}</p>
-              </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#EFECE4] pt-4 dark:border-[#262C36]">
+            <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 mr-1">
+              Key Section C CRs:
+            </span>
+            {[
+              { id: 'Q101', label: 'Q101 Sheldon (15m)' },
+              { id: 'Q256', label: 'Q256 CT CR (15m)' },
+              { id: 'Q175', label: 'Q175 CGT CR (10m)' },
+              { id: 'Q210', label: 'Q210 IHT CR (10m)' },
+              { id: 'SPEC-Q31', label: 'Spec Q31 Sarah (10m)' },
+            ].map((cr) => (
+              <button
+                key={cr.id}
+                type="button"
+                onClick={() => onOpenQuestionById(cr.id)}
+                className="rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1 text-xs font-semibold text-[#14171A] hover:border-[#0F5132] hover:bg-emerald-50/40 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200 dark:hover:border-emerald-500"
+              >
+                {cr.label}
+              </button>
             ))}
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-            <span className="text-[11px] font-semibold text-slate-500 mr-1">Key Sec C CRs:</span>
-            <button
-              type="button"
-              onClick={() => onOpenQuestionById('Q101')}
-              className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Q101 Sheldon (15m)
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenQuestionById('Q256')}
-              className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Q256 CT CR (15m)
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenQuestionById('Q175')}
-              className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Q175 CGT CR (10m)
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenQuestionById('Q210')}
-              className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Q210 IHT CR (10m)
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenQuestionById('SPEC-Q31')}
-              className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Spec Q31 Sarah (10m)
-            </button>
-          </div>
         </div>
       </section>
 
-      {/* 24-Topic Syllabus Mastery & RAG Map */}
-      <section className="rounded-lg border border-slate-200 bg-white p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-display text-base font-bold text-slate-900">
-              24-Topic Syllabus Mastery & RAG Map
-            </h2>
-            <p className="text-xs text-slate-500">
-              Select any topic to open its Phase-1 Revision Card & 4-Tier Practice Ladder. Green requires ≥80% mastery + Tier 3 Sec B/C pass.
-            </p>
-          </div>
-
-          <select
-            value={areaFilter}
-            onChange={(e) => setAreaFilter(e.target.value)}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800"
+      {/* Quiet Collapsible Kit Coverage Appendix (keeps Overview decluttered) */}
+      <section className="rounded-2xl border border-[#E6E4DD] bg-white px-5 py-4 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-neutral-600 dark:text-neutral-400">
+            <strong className="text-[#14171A] dark:text-[#F0F3F6]">Kaplan FA25 Bank Verified:</strong>{' '}
+            306 Exam Kit questions (Q1–Q306) + 21 Official Specimen items loaded and audited.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowCoverageTable((v) => !v)}
+            className="text-xs font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
           >
-            <option value="ALL">All 24 Syllabus Topics</option>
-            <option value="UK Tax System">UK Tax System</option>
-            <option value="Income Tax & NIC">Income Tax & NIC (Q1–127)</option>
-            <option value="Corporation Tax">Corporation Tax (Q213–270)</option>
-            <option value="Chargeable Gains">Chargeable Gains (Q128–179)</option>
-            <option value="Inheritance Tax">Inheritance Tax (Q180–212)</option>
-            <option value="VAT">VAT (Q271–306)</option>
-          </select>
+            {showCoverageTable ? 'Hide Coverage Index' : 'View Kit Coverage Index'}
+          </button>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-xs font-semibold text-slate-600">
-                <th className="px-3 py-2.5"># · Topic</th>
-                <th className="px-3 py-2.5">Area</th>
-                <th className="px-3 py-2.5">Kit Range</th>
-                <th className="px-3 py-2.5">Sitting Freq</th>
-                <th className="px-3 py-2.5">Tier</th>
-                <th className="px-3 py-2.5">Mastery</th>
-                <th className="px-3 py-2.5">RAG Status</th>
-                <th className="px-3 py-2.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredTopics.map((topic) => {
-                const tp = appState.topicProgress[topic.id];
-                const rag = tp?.rag ?? 'unstarted';
-                const badge = getRagLabel(rag);
-                return (
-                  <tr
-                    key={topic.id}
-                    className="transition-colors hover:bg-slate-50/80"
-                  >
-                    <td className="px-3 py-2.5 font-medium text-slate-900">
-                      <span className="font-mono text-xs text-slate-400 mr-1.5">
-                        {String(topic.id).padStart(2, '0')}
-                      </span>
-                      {topic.title}
-                    </td>
-                    <td className="px-3 py-2.5 text-xs text-slate-600">
-                      {topic.syllabusArea}
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-slate-700">
-                      {topic.kitRange}
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-slate-700 tabular-nums">
-                      {topic.phase1.frequencyCount}/8
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-slate-700 tabular-nums">
-                      T{tp?.tierUnlocked ?? 1}
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-xs font-semibold text-slate-900 tabular-nums">
-                      {tp?.attempts ? `${tp.mastery}%` : '—'}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span
-                        className={`inline-block whitespace-nowrap text-xs font-semibold ${badge.textClass}`}
-                      >
-                        {badge.text}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onSelectTopic(topic.id)}
-                        className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
-                      >
-                        Open →
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Kit Index Coverage & Study Text PDF Ingestion */}
-      <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-5 lg:col-span-2">
-          <h2 className="font-display text-base font-bold text-slate-900">
-            Kaplan TX-UK FA25 Exam Kit Bank Coverage (306 Qs + Specimen)
-          </h2>
-          <div className="mt-3 overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-xs">
+        {showCoverageTable && (
+          <div className="mt-4 overflow-x-auto border-t border-[#EFECE4] pt-4 dark:border-[#262C36]">
+            <table className="min-w-full divide-y divide-[#EFECE4] text-xs dark:divide-[#262C36]">
               <thead>
-                <tr className="bg-slate-50 font-semibold text-slate-600">
-                  <th className="px-3 py-2 text-left">Block</th>
-                  <th className="px-3 py-2 text-left">Sec A / B / C</th>
-                  <th className="px-3 py-2 text-left">Pages</th>
-                  <th className="px-3 py-2 text-left">Status</th>
+                <tr className="text-left font-semibold text-neutral-500 dark:text-neutral-400">
+                  <th className="py-2 pr-4">Syllabus Block</th>
+                  <th className="py-2 pr-4">Sec A / B / C</th>
+                  <th className="py-2 pr-4">Kit Pages</th>
+                  <th className="py-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
                 {KIT_INDEX_SUMMARY.map((row) => (
                   <tr key={row.area}>
-                    <td className="px-3 py-2 font-medium text-slate-900">{row.area}</td>
-                    <td className="px-3 py-2 font-mono text-slate-600">
+                    <td className="py-2 pr-4 font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                      {row.area}
+                    </td>
+                    <td className="py-2 pr-4 font-mono text-neutral-600 dark:text-neutral-300 tabular-nums">
                       {row.secACount} / {row.secBCount} / {row.secCCount} ({row.total})
                     </td>
-                    <td className="px-3 py-2 font-mono text-slate-500">
+                    <td className="py-2 pr-4 font-mono text-neutral-500 dark:text-neutral-400">
                       Q {row.qPages} · A {row.aPages}
                     </td>
-                    <td className="px-3 py-2">
-                      {row.loadedInBank ? (
-                        <span className="font-semibold text-teal-700">
-                          Loaded in Bank
-                        </span>
-                      ) : (
-                        <span className="text-slate-500">
-                          On-disk PDF (lookup below)
-                        </span>
-                      )}
+                    <td className="py-2 font-semibold text-[#0F5132] dark:text-emerald-400">
+                      {row.loadedInBank ? 'Loaded in Bank' : 'On-disk PDF'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-4">
-          <div>
-            <h2 className="font-display text-sm font-bold text-slate-900">
-              Source PDFs & Lookup
-            </h2>
-            <p className="mt-1 text-xs text-slate-600">
-              Exam Kit FA25 PDF is active on disk. Attach your Kaplan Study Text FA25 PDF if you want local chapter lookup:
-            </p>
-            <div className="mt-2.5 flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
-              {appState.studyTextLoaded ? (
-                <>
-                  <FileText className="h-4 w-4 text-teal-700" />
-                  <span className="font-medium text-teal-800 truncate">
-                    {appState.studyTextName}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <span className="text-slate-600">
-                    Study Text PDF not attached (chapters cited; exact ST page numbers omitted unless verified).
-                  </span>
-                </>
-              )}
-            </div>
-            <label className="mt-2.5 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50">
-              <Upload className="h-3.5 w-3.5" />
-              Attach Kaplan Study Text PDF
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={handleStudyTextFile}
-                className="hidden"
-              />
-            </label>
-            {uploadStatus && (
-              <p className="mt-1.5 text-xs text-blue-700">{uploadStatus}</p>
-            )}
-          </div>
-
-          <div className="border-t border-slate-200 pt-3">
-            <label className="block text-xs font-semibold text-slate-700">
-              Quick Question Jump & PDF Lookup (Q1–306)
-            </label>
-            <div className="mt-1.5 flex flex-wrap gap-2">
-              <input
-                type="number"
-                min={1}
-                max={306}
-                value={kitLookupQ}
-                onChange={(e) => setKitLookupQ(e.target.value)}
-                className="w-20 rounded-md border border-slate-300 px-2.5 py-1.5 font-mono text-xs text-slate-900"
-              />
-              <button
-                type="button"
-                onClick={() => onOpenQuestionById(`Q${Math.min(306, Math.max(1, Number(kitLookupQ) || 1))}`)}
-                className="rounded-md bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
-              >
-                Open Q{kitLookupQ || 1} →
-              </button>
-              <button
-                type="button"
-                onClick={handleKitLookup}
-                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-              >
-                Read PDF
-              </button>
-            </div>
-            {kitLookupResult && (
-              <p className="mt-2 max-h-28 overflow-y-auto rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
-                {kitLookupResult}
-              </p>
-            )}
-          </div>
-        </div>
+        )}
       </section>
     </div>
   );

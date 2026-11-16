@@ -17,13 +17,16 @@ import {
   categorizeTrapLedger,
   computeExamPredictions,
   computeStudyPlanDays,
+  computeTaxHeadSummaries,
   createInitialAppState,
   getDueMistakes,
+  getRecommendedNextAction,
   parseImportedState,
   recordAttemptAndUpdateState,
   serializeStateForExport,
 } from './mastery';
-import type { KitQuestion } from '../types/tx';
+import { TOPICS, CONFUSION_CLINIC_PAIRS } from '../data/taxReference';
+import type { CaseSubQuestion, KitQuestion, MatrixOptions, McqOption, PairDropdownGroup } from '../types/tx';
 
 const questions: KitQuestion[] = JSON.parse(
   fs.readFileSync(path.resolve('src/data/questions.json'), 'utf8')
@@ -72,15 +75,26 @@ test('Company Car & Fuel benefit ignores partial fuel contribution & caps RDE2',
   assert.equal(res.fuelBenefit, Math.round(28_200 * 0.36 * (11 / 12)));
 });
 
-test('Deterministic Tier-4 Trap Variants generate verified option A across IT, CT, CGT, IHT & VAT', () => {
-  for (const tid of [2, 5, 11, 13, 17, 22, 23]) {
-    const v = generateTrapVariant(tid, 0);
-    assert.equal(v.is_variant, true, `Topic ${tid} should flag is_variant`);
-    assert.equal((v.options as unknown[]).length, 4, `Topic ${tid} should have 4 options`);
-    const graded = gradeQuestion(v, 'A');
-    assert.equal(graded.isFullyCorrect, true, `Topic ${tid} variant should grade A as 100%`);
-    assert.equal(graded.marksScored, 2);
+test('Deterministic Tier-4 Trap Variants rotate correct option across A/B/C/D and grade accurately for IT, Prop, Cars, Pensions, CAs, Losses, NIC, CT, CGT, IHT & VAT', () => {
+  const seenCorrectLetters = new Set<string>();
+  for (const tid of [2, 4, 5, 6, 8, 10, 11, 13, 17, 22, 23]) {
+    for (const seed of [0, 1, 2]) {
+      const v = generateTrapVariant(tid, seed);
+      assert.equal(v.is_variant, true, `Topic ${tid} should flag is_variant`);
+      const opts = v.options as McqOption[];
+      assert.equal(opts.length, 4, `Topic ${tid} should have 4 options`);
+      assert.equal(new Set(opts.map((o) => o.text)).size, 4, `Topic ${tid} seed ${seed} should have 4 distinct options`);
+      seenCorrectLetters.add(String(v.correct_answer));
+
+      const gradedRight = gradeQuestion(v, String(v.correct_answer));
+      assert.equal(gradedRight.isFullyCorrect, true, `Topic ${tid} seed ${seed} should grade ${v.correct_answer} as 100%`);
+      assert.equal(gradedRight.marksScored, 2);
+
+      const wrongOpt = opts.find((o) => o.key !== String(v.correct_answer))!;
+      assert.equal(gradeQuestion(v, wrongOpt.key).marksScored, 0);
+    }
   }
+  assert.ok(seenCorrectLetters.size >= 3, `Expected rotated answers across A/B/C/D, got ${[...seenCorrectLetters].join(',')}`);
 });
 
 test('Default profile targets 8 December 2026 exam and questions.json has all 306 Kit + 100m Specimen', () => {
@@ -290,5 +304,138 @@ test('categorizeTrapLedger groups traps into critical (3+), repeat (2), single (
   assert.equal(result.buckets[2].entries[0].trapCategory, 'VAT Flat Rate & Cash');
   assert.equal(result.buckets[3].entries[0].trapCategory, 'IHT 7-Year Cumulation');
 });
+
+test('All 306 Kit + 21 Specimen items pass structural integrity, matrix/dropdown validity, CR mark sums & canonical debrief hygiene', () => {
+  const bank = [...questions, ...specimen];
+  const checkMatrix = (id: string, mat: MatrixOptions, ans: Record<string, string[]>) => {
+    assert.equal(new Set(mat.columns).size, mat.columns.length, `${id}: duplicate matrix columns`);
+    for (const col of mat.columns) {
+      assert.ok(col !== 'Not' && col !== 'True False' && !(col.includes('Neither type') && col !== 'Neither type'), `${id}: truncated/merged matrix header "${col}"`);
+    }
+    assert.equal(Object.keys(ans).length, mat.rows.length, `${id}: matrix answer row count mismatch`);
+    let totalSelected = 0;
+    for (let r = 0; r < mat.rows.length; r++) {
+      const vals = ans[String(r)] ?? [];
+      totalSelected += vals.length;
+      for (const v of vals) {
+        assert.ok(mat.columns.includes(v), `${id}: matrix answer "${v}" missing from columns`);
+      }
+    }
+    assert.ok(totalSelected >= 1, `${id}: matrix has zero selected cells across all rows`);
+  };
+
+  const checkPairDropdown = (id: string, groups: PairDropdownGroup[], ans: string[]) => {
+    assert.equal(ans.length, groups.length, `${id}: pair_dropdown answer length mismatch`);
+    groups.forEach((g, idx) => {
+      assert.ok(g.choices.includes(ans[idx]), `${id}: dropdown answer "${ans[idx]}" missing from choices`);
+      for (const c of g.choices) {
+        assert.ok(!/\bAND\s+£|\bWITH GROUP ASPECTS\b/.test(c), `${id}: artifact leaked into choice "${c}"`);
+      }
+    });
+  };
+
+  const countsByTopic: Record<number, number> = {};
+  for (const q of bank) {
+    countsByTopic[q.topic_id] = (countsByTopic[q.topic_id] ?? 0) + 1;
+    assert.ok(q.full_worked_solution.trim().length >= 15, `${q.id}: worked solution too short`);
+    assert.ok(!/Walk in the footsteps|W alk in the footsteps/i.test(q.examiner_debrief.trap_of_question), `${q.id}: noisy tutor boilerplate in trap_of_question`);
+
+    if (q.examiner_debrief.trap_category === 'UK Residence') {
+      assert.ok(q.topic_id === 3 || q.id === 'SPEC-Q15', `${q.id}: spurious UK Residence trap_category on topic ${q.topic_id}`);
+    }
+    if (q.topic_id >= 23) assert.equal(q.examiner_debrief.trap_category, 'VAT Compliance & FRS', `${q.id}: VAT must map to VAT Compliance & FRS`);
+    if (q.topic_id === 22) assert.equal(q.examiner_debrief.trap_category, 'Inheritance Tax', `${q.id}: IHT must map to Inheritance Tax`);
+    if (q.topic_id >= 17 && q.topic_id <= 21) assert.equal(q.examiner_debrief.trap_category, 'CGT Losses & Matching', `${q.id}: CGT must map to CGT Losses & Matching`);
+    if (q.topic_id === 12) assert.equal(q.examiner_debrief.trap_category, 'SA Tax Admin & Records', `${q.id}: T12 must map to SA Tax Admin & Records`);
+    if (q.topic_id >= 13 && q.topic_id <= 16) {
+      assert.ok(
+        ['Corporation Tax', 'Company Losses', 'Groups of Companies', 'Company Tax Admin', 'Capital Allowances'].includes(q.examiner_debrief.trap_category),
+        `${q.id}: CT topic ${q.topic_id} mistagged as ${q.examiner_debrief.trap_category}`
+      );
+    }
+
+    if (q.type === 'cr') {
+      const sumSteps = q.mark_scheme_steps.reduce((s, st) => s + st.marks, 0);
+      assert.ok(Math.abs(sumSteps - q.marks) <= 0.5, `${q.id}: CR mark_scheme_steps sum ${sumSteps} != ${q.marks}`);
+    } else if (q.type === 'case') {
+      const subs = q.options as CaseSubQuestion[];
+      assert.equal(subs.length, 5, `${q.id}: case must have 5 sub-questions`);
+      subs.forEach((sq) => {
+        if (sq.interaction === 'matrix') {
+          checkMatrix(`${q.id}#${sq.sub_num}`, sq.options as MatrixOptions, sq.correct_answer as Record<string, string[]>);
+        } else if (sq.interaction === 'pair_dropdown') {
+          checkPairDropdown(`${q.id}#${sq.sub_num}`, sq.options as PairDropdownGroup[], sq.correct_answer as string[]);
+        } else if (sq.interaction === 'grid_2x2') {
+          for (const opt of sq.options as McqOption[]) {
+            assert.ok(!/Col\s*1|Chargeable gain\s*\/|Allowable cost\s*\//.test(opt.text), `${q.id}#${sq.sub_num}: grid header leak "${opt.text}"`);
+          }
+        }
+      });
+    } else if (q.interaction === 'matrix') {
+      checkMatrix(q.id, q.options as MatrixOptions, q.correct_answer as Record<string, string[]>);
+    } else if (q.interaction === 'pair_dropdown') {
+      checkPairDropdown(q.id, q.options as PairDropdownGroup[], q.correct_answer as string[]);
+    } else if (q.interaction === 'grid_2x2') {
+      for (const opt of q.options as McqOption[]) {
+        assert.ok(!/Col\s*1|Chargeable gain\s*\/|Allowable cost\s*\//.test(opt.text), `${q.id}: grid header leak "${opt.text}"`);
+      }
+    }
+  }
+
+  for (const t of TOPICS) {
+    assert.equal(t.extractedCount, countsByTopic[t.id] ?? 0, `Topic ${t.id} extractedCount out of sync`);
+    for (const rule of [...t.phase1.coreRules, ...t.phase1.proformaLines]) {
+      assert.ok(!/\bWait:|verify per ST|\?\s*Note/i.test(rule), `Topic ${t.id} contains draft note: ${rule}`);
+    }
+  }
+  for (const pair of CONFUSION_CLINIC_PAIRS) {
+    for (const sc of pair.scenarios) {
+      assert.ok(!/\bWait\b/i.test(sc.explanation), `Confusion pair ${pair.id} contains draft Wait wording`);
+    }
+  }
+});
+
+test('computeTaxHeadSummaries covers all 24 topics and getRecommendedNextAction prioritises traps then SRS', () => {
+  const initState = createInitialAppState();
+  const heads = computeTaxHeadSummaries(initState);
+  assert.equal(heads.length, 6);
+  assert.equal(heads.reduce((s, h) => s + h.topicsCount, 0), 24);
+  assert.equal(heads.reduce((s, h) => s + h.questionCount, 0), 327);
+
+  const initialRec = getRecommendedNextAction(initState);
+  assert.equal(initialRec.kind, 'weak_topic');
+
+  const q27 = questions.find((q) => q.id === 'Q27')!;
+  const s1 = recordAttemptAndUpdateState(initState, {
+    question: q27,
+    tier: 2,
+    marksScored: 0,
+    marksAvailable: 2,
+    freeMarksCaptured: 0,
+    freeMarksTotal: 0,
+    userAnswerSummary: 'A',
+    correctAnswerSummary: 'B',
+    elapsedSeconds: 45,
+  }).nextState;
+
+  const afterOneMiss = getRecommendedNextAction(s1, new Date(Date.now() + 2 * 86400_000).toISOString());
+  assert.equal(afterOneMiss.kind, 'srs');
+
+  const s2 = recordAttemptAndUpdateState(s1, {
+    question: q27,
+    tier: 2,
+    marksScored: 0,
+    marksAvailable: 2,
+    freeMarksCaptured: 0,
+    freeMarksTotal: 0,
+    userAnswerSummary: 'A',
+    correctAnswerSummary: 'B',
+    elapsedSeconds: 45,
+  }).nextState;
+  const afterTwoHits = getRecommendedNextAction(s2);
+  assert.equal(afterTwoHits.kind, 'micro_drill');
+});
+
+
 
 

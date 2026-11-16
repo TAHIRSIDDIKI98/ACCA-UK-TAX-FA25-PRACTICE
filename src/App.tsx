@@ -15,17 +15,19 @@ import type {
   SectionType,
   UserProfile,
 } from './types/tx';
-import { TopBar, type NavTab } from './components/TopBar';
+import type { NavTab } from './components/TopBar';
+import { AppShell } from './components/AppShell';
 import { DashboardView } from './components/DashboardView';
 import { TopicView } from './components/TopicView';
 import { QuestionPlayer } from './components/QuestionPlayer';
 import { LabsView, type LabSubTab } from './components/LabsView';
 import { MockBuilderView } from './components/MockBuilderView';
-import { TaxTablesView } from './components/TaxTablesView';
+import { TaxTablesDrawer, TaxTablesView } from './components/TaxTablesView';
 
 const KIT_QUESTIONS = questionsData as KitQuestion[];
 const SPECIMEN_QUESTIONS = specimenData as KitQuestion[];
 const ALL_BANK_QUESTIONS: KitQuestion[] = [...KIT_QUESTIONS, ...SPECIMEN_QUESTIONS];
+const THEME_STORAGE_KEY = 'tx_mastercoach_theme_v1';
 
 function loadSavedState(): AppState {
   const base = createInitialAppState();
@@ -55,8 +57,31 @@ export default function App() {
   );
   const [activeTier, setActiveTier] = useState<1 | 2 | 3 | 4>(2);
   const [autoLaunchSpecimen, setAutoLaunchSpecimen] = useState(false);
+  const [globalTablesOpen, setGlobalTablesOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
 
-  // Sync ?autostart=1 bypass per prompt/spec
+  // Apply .dark class to <html> cleanly
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Ignore storage error
+    }
+  }, [theme]);
+
+  // Sync ?autostart=1 bypass
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('autostart') === '1') {
@@ -125,22 +150,46 @@ export default function App() {
   };
 
   const handleLaunchMicroDrill = (trapCategory: string) => {
-    // Pick a question matching that trap category (or generate a trap variant for its topic)
+    const lower = trapCategory.toLowerCase();
     const match = ALL_BANK_QUESTIONS.find(
       (q) =>
-        q.examiner_debrief.trap_category.toLowerCase() === trapCategory.toLowerCase() &&
+        q.examiner_debrief.trap_category.toLowerCase() === lower &&
         q.id !== activeQuestion.id
     );
     if (match) {
       handleLaunchQuestion(match, 4);
       return;
     }
-    const topicIdGuess = trapCategory.toLowerCase().includes('car')
-      ? 5
-      : trapCategory.toLowerCase().includes('pa') || trapCategory.toLowerCase().includes('ani')
-      ? 2
-      : 11;
-    handleLaunchQuestion(generateTrapVariant(topicIdGuess, 0), 4);
+    const topicIdGuess =
+      lower.includes('car') || lower.includes('fuel') || lower.includes('employment') || lower.includes('benefit')
+        ? 5
+        : lower.includes('property')
+        ? 4
+        : lower.includes('pension') || lower.includes('annual allowance')
+        ? 6
+        : lower.includes('capital allowance')
+        ? 8
+        : lower.includes('trading loss') || lower.includes('partnership')
+        ? 10
+        : lower.includes('pa') || lower.includes('ani') || lower.includes('savings') || lower.includes('dividend') || lower.includes('residence')
+        ? 2
+        : lower.includes('company loss')
+        ? 14
+        : lower.includes('group')
+        ? 15
+        : lower.includes('corporation') || lower.includes('ct ')
+        ? 13
+        : lower.includes('chattel') || lower.includes('cgt') || lower.includes('badr') || lower.includes('share') || lower.includes('prr')
+        ? 17
+        : lower.includes('iht') || lower.includes('inheritance')
+        ? 22
+        : lower.includes('vat')
+        ? 23
+        : 11;
+    handleLaunchQuestion(
+      generateTrapVariant(topicIdGuess, appState.attempts.length % 3),
+      4
+    );
   };
 
   const handleRateMemoryCard = (
@@ -241,98 +290,116 @@ export default function App() {
     }));
   };
 
+  const breadcrumbDetail =
+    activeTab === 'player'
+      ? `${activeQuestion.id} · Sec ${activeQuestion.section}`
+      : activeTab === 'topics'
+      ? `Topic ${selectedTopicId}`
+      : undefined;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <TopBar
-        activeTab={activeTab}
-        onNavigate={(tab) => {
-          setAutoLaunchSpecimen(false);
-          if (tab === 'mistakes') setLabsSubTab('srs');
-          setActiveTab(tab);
-        }}
-        dueMistakeCount={dueMistakes.length}
+    <AppShell
+      activeTab={activeTab}
+      breadcrumbDetail={breadcrumbDetail}
+      appState={appState}
+      dueMistakeCount={dueMistakes.length}
+      theme={theme}
+      onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
+      onNavigate={(tab) => {
+        setAutoLaunchSpecimen(false);
+        if (tab === 'mistakes') setLabsSubTab('srs');
+        setActiveTab(tab);
+      }}
+      onSaveProfile={handleSaveProfile}
+      onOpenQuestionById={handleOpenQuestionById}
+      onStudyTextUploaded={handleStudyTextUploaded}
+      onOpenTablesDrawer={() => setGlobalTablesOpen(true)}
+    >
+      <TaxTablesDrawer
+        open={globalTablesOpen}
+        onClose={() => setGlobalTablesOpen(false)}
       />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {activeTab === 'overview' && (
-          <DashboardView
-            appState={appState}
-            totalQuestionsLoaded={KIT_QUESTIONS.length}
-            specimenItemCount={SPECIMEN_QUESTIONS.length}
-            onSaveProfile={handleSaveProfile}
-            onSelectTopic={handleSelectTopic}
-            onLaunchSpecimenMock={() => {
-              setAutoLaunchSpecimen(true);
-              setActiveTab('mock');
-            }}
-            onOpenDueMistakes={() => {
-              setLabsSubTab('srs');
-              setActiveTab('mistakes');
-            }}
-            onOpenTrapLedgerTab={() => {
-              setLabsSubTab('traps');
-              setActiveTab('mistakes');
-            }}
-            onLaunchMicroDrill={handleLaunchMicroDrill}
-            onOpenQuestionById={handleOpenQuestionById}
-            onStudyTextUploaded={handleStudyTextUploaded}
-          />
-        )}
+      {activeTab === 'overview' && (
+        <DashboardView
+          appState={appState}
+          totalQuestionsLoaded={KIT_QUESTIONS.length}
+          specimenItemCount={SPECIMEN_QUESTIONS.length}
+          onSelectTopic={handleSelectTopic}
+          onLaunchSpecimenMock={() => {
+            setAutoLaunchSpecimen(true);
+            setActiveTab('mock');
+          }}
+          onOpenDueMistakes={() => {
+            setLabsSubTab('srs');
+            setActiveTab('mistakes');
+          }}
+          onOpenTrapLedgerTab={() => {
+            setLabsSubTab('traps');
+            setActiveTab('mistakes');
+          }}
+          onLaunchMicroDrill={handleLaunchMicroDrill}
+          onOpenQuestionById={handleOpenQuestionById}
+          onOpenMockTab={() => {
+            setAutoLaunchSpecimen(false);
+            setActiveTab('mock');
+          }}
+        />
+      )}
 
-        {activeTab === 'topics' && (
-          <TopicView
-            topicId={selectedTopicId}
-            allQuestions={ALL_BANK_QUESTIONS}
-            appState={appState}
-            onSelectTopic={(id) => setSelectedTopicId(id)}
-            onBackToOverview={() => setActiveTab('overview')}
-            onLaunchQuestion={handleLaunchQuestion}
-          />
-        )}
+      {activeTab === 'topics' && (
+        <TopicView
+          topicId={selectedTopicId}
+          allQuestions={ALL_BANK_QUESTIONS}
+          appState={appState}
+          onSelectTopic={(id) => setSelectedTopicId(id)}
+          onBackToOverview={() => setActiveTab('overview')}
+          onLaunchQuestion={handleLaunchQuestion}
+        />
+      )}
 
-        {activeTab === 'player' && (
-          <QuestionPlayer
-            question={activeQuestion}
-            allQuestions={ALL_BANK_QUESTIONS}
-            tier={activeTier}
-            appState={appState}
-            onSelectQuestion={(q) => setActiveQuestion(q)}
-            onRecordAttempt={handleRecordAttempt}
-            onLaunchMicroDrill={handleLaunchMicroDrill}
-          />
-        )}
+      {activeTab === 'player' && (
+        <QuestionPlayer
+          question={activeQuestion}
+          allQuestions={ALL_BANK_QUESTIONS}
+          tier={activeTier}
+          appState={appState}
+          onSelectQuestion={(q) => setActiveQuestion(q)}
+          onRecordAttempt={handleRecordAttempt}
+          onLaunchMicroDrill={handleLaunchMicroDrill}
+        />
+      )}
 
-        {activeTab === 'mistakes' && (
-          <LabsView
-            appState={appState}
-            allQuestions={ALL_BANK_QUESTIONS}
-            initialSubTab={labsSubTab}
-            onRedrillQuestion={handleOpenQuestionById}
-            onRateMemoryCard={handleRateMemoryCard}
-            onLaunchMicroDrill={handleLaunchMicroDrill}
-          />
-        )}
+      {activeTab === 'mistakes' && (
+        <LabsView
+          appState={appState}
+          allQuestions={ALL_BANK_QUESTIONS}
+          initialSubTab={labsSubTab}
+          onRedrillQuestion={handleOpenQuestionById}
+          onRateMemoryCard={handleRateMemoryCard}
+          onLaunchMicroDrill={handleLaunchMicroDrill}
+        />
+      )}
 
-        {activeTab === 'mock' && (
-          <MockBuilderView
-            allQuestions={KIT_QUESTIONS}
-            specimenQuestions={SPECIMEN_QUESTIONS}
-            appState={appState}
-            autoLaunchSpecimen={autoLaunchSpecimen}
-            onSaveMockResult={handleSaveMockResult}
-            onRecordMockAttempts={handleRecordMockAttempts}
-            onSyncMockCrMarks={handleSyncMockCrMarks}
-            onOpenQuestionById={handleOpenQuestionById}
-          />
-        )}
+      {activeTab === 'mock' && (
+        <MockBuilderView
+          allQuestions={KIT_QUESTIONS}
+          specimenQuestions={SPECIMEN_QUESTIONS}
+          appState={appState}
+          autoLaunchSpecimen={autoLaunchSpecimen}
+          onSaveMockResult={handleSaveMockResult}
+          onRecordMockAttempts={handleRecordMockAttempts}
+          onSyncMockCrMarks={handleSyncMockCrMarks}
+          onOpenQuestionById={handleOpenQuestionById}
+        />
+      )}
 
-        {activeTab === 'tables' && (
-          <TaxTablesView
-            appState={appState}
-            onImportState={(nextState) => setAppState(nextState)}
-          />
-        )}
-      </main>
-    </div>
+      {activeTab === 'tables' && (
+        <TaxTablesView
+          appState={appState}
+          onImportState={(nextState) => setAppState(nextState)}
+        />
+      )}
+    </AppShell>
   );
 }

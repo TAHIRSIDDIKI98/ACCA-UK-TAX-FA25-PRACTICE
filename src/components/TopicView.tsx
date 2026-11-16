@@ -13,6 +13,16 @@ interface TopicViewProps {
   onLaunchQuestion: (question: KitQuestion, tier: 1 | 2 | 3 | 4) => void;
 }
 
+const AREA_CHIPS = [
+  'ALL',
+  'Income Tax & NIC',
+  'Corporation Tax',
+  'Chargeable Gains',
+  'Inheritance Tax',
+  'VAT',
+  'UK Tax System',
+];
+
 export const TopicView: React.FC<TopicViewProps> = ({
   topicId,
   allQuestions,
@@ -23,26 +33,27 @@ export const TopicView: React.FC<TopicViewProps> = ({
 }) => {
   const [selectedTier, setSelectedTier] = useState<1 | 2 | 3 | 4>(2);
   const [variantSeed, setVariantSeed] = useState(0);
+  const [areaFilter, setAreaFilter] = useState<string>('ALL');
 
   const topic: TopicDefinition =
-    TOPICS.find((t) => t.id === topicId) ?? TOPICS[4]; // default Topic 5 Employment Income
+    TOPICS.find((t) => t.id === topicId) ?? TOPICS[4];
   const tp = appState.topicProgress[topic.id];
   const unlockedTier = tp?.tierUnlocked ?? 1;
 
-  const topicQuestions = useMemo(() => {
-    return allQuestions.filter((q) => q.topic_id === topic.id);
-  }, [allQuestions, topic.id]);
+  const visibleTopics = useMemo(() => {
+    if (areaFilter === 'ALL') return TOPICS;
+    return TOPICS.filter((t) => t.syllabusArea === areaFilter);
+  }, [areaFilter]);
+
+  const topicQuestions = useMemo(
+    () => allQuestions.filter((q) => q.topic_id === topic.id),
+    [allQuestions, topic.id]
+  );
 
   const tierFiltered = useMemo(() => {
-    if (selectedTier === 1) {
-      return topicQuestions.filter((q) => q.section === 'A').slice(0, 6);
-    }
-    if (selectedTier === 2) {
-      return topicQuestions.filter((q) => q.section === 'A');
-    }
-    if (selectedTier === 3) {
-      return topicQuestions.filter((q) => q.section === 'B' || q.section === 'C');
-    }
+    if (selectedTier === 1) return topicQuestions.filter((q) => q.section === 'A').slice(0, 6);
+    if (selectedTier === 2) return topicQuestions.filter((q) => q.section === 'A');
+    if (selectedTier === 3) return topicQuestions.filter((q) => q.section === 'B' || q.section === 'C');
     return topicQuestions.slice(0, 4);
   }, [selectedTier, topicQuestions]);
 
@@ -69,75 +80,104 @@ export const TopicView: React.FC<TopicViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Topic Selector Header */}
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
+      {/* Area Filter Chips + Compact Topic Switcher */}
+      <div className="rounded-2xl border border-[#E6E4DD] bg-white p-4 sm:p-5 space-y-4 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={onBackToOverview}
-            className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Map
+            Today Hub
           </button>
-          <div>
-            <p className="font-mono text-xs font-semibold text-blue-700">
-              Topic {topic.id} of 24 · {topic.stChapter.toUpperCase()} · {topic.syllabusArea} · {topic.kitRange}
-            </p>
-            <h1 className="font-display text-xl font-bold text-slate-900">
-              {topic.title}
-            </h1>
+
+          <div className="flex flex-wrap gap-1.5">
+            {AREA_CHIPS.map((area) => {
+              const active = areaFilter === area;
+              return (
+                <button
+                  key={area}
+                  type="button"
+                  onClick={() => setAreaFilter(area)}
+                  className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                    active
+                      ? 'bg-[#0F5132] text-white dark:bg-emerald-600'
+                      : 'bg-[#FAF9F6] text-neutral-600 hover:bg-[#EFECE4] dark:bg-[#1C222B] dark:text-neutral-300'
+                  }`}
+                >
+                  {area === 'ALL' ? 'All 24 Topics' : area}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <select
-            aria-label="Switch syllabus topic"
-            value={topic.id}
-            onChange={(e) => onSelectTopic(Number(e.target.value))}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800"
-          >
-            {TOPICS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.id}. {t.title} ({t.kitRange})
-              </option>
-            ))}
-          </select>
+        {/* Interactive Horizontal Topic Rail */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {visibleTopics.map((t) => {
+            const isSelected = t.id === topic.id;
+            const prog = appState.topicProgress[t.id];
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onSelectTopic(t.id)}
+                className={`shrink-0 rounded-xl border px-3 py-2 text-left transition-colors ${
+                  isSelected
+                    ? 'border-[#0F5132] bg-[#0F5132] text-white dark:border-emerald-500 dark:bg-emerald-700'
+                    : 'border-[#E6E4DD] bg-[#FAF9F6] text-[#14171A] hover:border-[#0F5132]/50 dark:border-[#262C36] dark:bg-[#12161D] dark:text-[#F0F3F6]'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3 font-mono text-[11px]">
+                  <span className={isSelected ? 'text-emerald-100' : 'text-neutral-500 dark:text-neutral-400'}>
+                    T{String(t.id).padStart(2, '0')}
+                  </span>
+                  <span className={isSelected ? 'text-emerald-100' : 'text-[#0F5132] dark:text-emerald-400'}>
+                    {prog?.attempts ? `${prog.mastery}%` : `${t.extractedCount}Q`}
+                  </span>
+                </div>
+                <p className="mt-0.5 max-w-[155px] truncate text-xs font-semibold">
+                  {t.title}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* PHASE 1: Quick Revision Card ("Exam Snapshot") */}
-      <section className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6 space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+      {/* PHASE 1: Editorial Handbook Revision Spread */}
+      <section className="rounded-2xl border border-[#E6E4DD] bg-white p-6 sm:p-7 space-y-6 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className="flex flex-col gap-3 border-b border-[#EFECE4] pb-4 sm:flex-row sm:items-end sm:justify-between dark:border-[#262C36]">
           <div>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-blue-700">
-              Phase 1 · Quick Revision Card
-            </span>
-            <h2 className="font-display text-lg font-bold text-slate-900">
-              Exam Snapshot — {topic.title}
-            </h2>
+            <p className="font-mono text-xs font-semibold text-[#0F5132] dark:text-emerald-400">
+              Topic {topic.id} of 24 · {topic.stChapter} · {topic.syllabusArea} · {topic.kitRange}
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-[#14171A] dark:text-[#F0F3F6]">
+              {topic.title}
+            </h1>
           </div>
-          <span className="rounded border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-semibold text-slate-700">
+          <div className="font-mono text-xs font-semibold text-neutral-600 dark:text-neutral-300 tabular-nums">
             Examined {topic.phase1.frequencyCount}/8 sittings · {topic.phase1.kitRefs}
-          </span>
+          </div>
         </div>
 
-        <p className="rounded-md border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm text-slate-800">
-          <span className="font-semibold text-blue-900">How it is examined: </span>
+        <p className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-4 py-3 text-sm text-[#14171A] dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-200">
+          <strong className="text-[#0F5132] dark:text-emerald-400">How it is examined: </strong>
           {topic.phase1.howExamined}
         </p>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {/* Core Rules */}
-          <div className="space-y-3">
-            <h3 className="font-display text-sm font-bold text-slate-900">
-              Core FA25 Rules & Tax Law
-            </h3>
-            <ul className="space-y-2 text-sm text-slate-700">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Core Law & Rules */}
+          <div className="space-y-3 lg:col-span-6">
+            <h2 className="font-display text-base font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+              Core FA25 Rules &amp; Tax Law
+            </h2>
+            <ul className="divide-y divide-[#EFECE4] text-sm text-neutral-700 dark:divide-[#262C36] dark:text-neutral-300">
               {topic.phase1.coreRules.map((rule, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="font-mono text-xs font-bold text-blue-700 mt-0.5">
-                    0{i + 1}
+                <li key={i} className="flex gap-3 py-2.5 first:pt-0">
+                  <span className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400 mt-0.5 tabular-nums">
+                    {String(i + 1).padStart(2, '0')}
                   </span>
                   <span>{rule}</span>
                 </li>
@@ -145,31 +185,33 @@ export const TopicView: React.FC<TopicViewProps> = ({
             </ul>
           </div>
 
-          {/* Proforma & Key Numbers */}
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-md border border-slate-200">
-              <div className="border-b border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900">
+          {/* Proforma Ledger + Key FA25 Figures */}
+          <div className="space-y-4 lg:col-span-6">
+            <div className="overflow-hidden rounded-xl border border-[#E6E4DD] dark:border-[#262C36]">
+              <div className="border-b border-[#EFECE4] bg-[#FAF9F6] px-4 py-2 text-xs font-bold text-[#14171A] dark:border-[#262C36] dark:bg-[#12161D] dark:text-[#F0F3F6]">
                 {topic.phase1.proformaTitle}
               </div>
-              <div className="bg-slate-900 px-3.5 py-3 font-mono text-xs leading-relaxed text-slate-100">
+              <div className="bg-[#14171A] px-4 py-3.5 font-mono text-xs leading-relaxed text-neutral-100 dark:bg-[#0D1117]">
                 {topic.phase1.proformaLines.map((line, i) => (
                   <div key={i}>{line}</div>
                 ))}
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-md border border-slate-200">
-              <div className="border-b border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900">
-                FA25 Numbers & Thresholds
+            <div className="overflow-hidden rounded-xl border border-[#E6E4DD] dark:border-[#262C36]">
+              <div className="border-b border-[#EFECE4] bg-[#FAF9F6] px-4 py-2 text-xs font-bold text-[#14171A] dark:border-[#262C36] dark:bg-[#12161D] dark:text-[#F0F3F6]">
+                FA25 Thresholds &amp; Numbers
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
                 {topic.phase1.keyNumbers.map((kn, i) => (
-                  <div key={i} className="flex items-center justify-between gap-2 px-3.5 py-2 text-xs">
+                  <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
                     <div>
-                      <span className="font-semibold text-slate-800">{kn.label}</span>
-                      {kn.note && <p className="text-slate-500">{kn.note}</p>}
+                      <span className="font-semibold text-[#14171A] dark:text-[#F0F3F6]">{kn.label}</span>
+                      {kn.note && (
+                        <p className="text-neutral-500 dark:text-neutral-400">{kn.note}</p>
+                      )}
                     </div>
-                    <span className="font-mono font-bold text-blue-800 tabular-nums">
+                    <span className="font-mono font-bold text-[#0F5132] dark:text-emerald-400 tabular-nums">
                       {kn.value}
                     </span>
                   </div>
@@ -179,24 +221,24 @@ export const TopicView: React.FC<TopicViewProps> = ({
           </div>
         </div>
 
-        {/* Top Traps + Memory Hook */}
-        <div className="grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 lg:grid-cols-3">
-          <div className="rounded-md border border-red-200 bg-red-50/50 p-3.5 lg:col-span-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-red-900">
-              Examiner’s Top Traps in This Topic
+        {/* Traps & Memory Hook */}
+        <div className="grid grid-cols-1 gap-4 border-t border-[#EFECE4] pt-5 lg:grid-cols-3 dark:border-[#262C36]">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 lg:col-span-2 dark:border-amber-900/60 dark:bg-amber-950/25">
+            <h3 className="font-mono text-xs font-bold text-amber-900 dark:text-amber-300">
+              Examiner’s Top Traps
             </h3>
-            <ul className="mt-2 space-y-1.5 text-xs text-red-950">
+            <ul className="mt-2 space-y-1.5 text-xs text-amber-950 dark:text-amber-100">
               {topic.phase1.topTraps.map((trap, i) => (
                 <li key={i}>• {trap}</li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded-md border border-teal-200 bg-teal-50/50 p-3.5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-teal-900">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/25">
+            <h3 className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
               Memory Hook
             </h3>
-            <p className="mt-2 text-sm font-semibold text-teal-950">
+            <p className="mt-2 text-sm font-semibold text-[#14171A] dark:text-emerald-100">
               {topic.phase1.memoryHook}
             </p>
           </div>
@@ -204,23 +246,23 @@ export const TopicView: React.FC<TopicViewProps> = ({
       </section>
 
       {/* PHASE 2: 4-Tier Adaptive Practice Ladder */}
-      <section className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6 space-y-5">
+      <section className="rounded-2xl border border-[#E6E4DD] bg-white p-6 sm:p-7 space-y-5 dark:border-[#262C36] dark:bg-[#161B22]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-blue-700">
-              Phase 2 · Practice Ladder
-            </span>
-            <h2 className="font-display text-lg font-bold text-slate-900">
-              Adaptive Practice Tiers ({topicAttemptedCount}/{topicQuestions.length} attempted · Mastery {tp?.mastery ?? 0}%)
+            <p className="font-mono text-xs font-semibold text-[#0F5132] dark:text-emerald-400">
+              Phase 2 · 4-Tier Practice Ladder
+            </p>
+            <h2 className="font-display text-xl font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+              {topicAttemptedCount}/{topicQuestions.length} Attempted · Mastery {tp?.mastery ?? 0}%
             </h2>
           </div>
 
           <button
             type="button"
             onClick={handleLaunchTier4Variant}
-            className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#14171A] px-4 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
           >
-            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
             Launch Tier-4 Trap Variant
           </button>
         </div>
@@ -228,9 +270,9 @@ export const TopicView: React.FC<TopicViewProps> = ({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { tier: 1 as const, label: 'Tier 1 · Foundation', desc: 'Single-rule Section A OTs' },
-            { tier: 2 as const, label: 'Tier 2 · Kit Sec A', desc: 'Full Section A OTs (2 marks each)' },
+            { tier: 2 as const, label: 'Tier 2 · Kit Sec A', desc: 'Full Section A OTs (2m each)' },
             { tier: 3 as const, label: 'Tier 3 · Kit Sec B/C', desc: '10m OT cases & 10–15m CRs' },
-            { tier: 4 as const, label: 'Tier 4 · Trap Variant', desc: 'Mastercoach trap-planted drill' },
+            { tier: 4 as const, label: 'Tier 4 · Trap Variant', desc: 'FA25 trap-planted drill' },
           ].map((item) => {
             const active = selectedTier === item.tier;
             const isUnlocked = item.tier <= unlockedTier;
@@ -239,96 +281,95 @@ export const TopicView: React.FC<TopicViewProps> = ({
                 key={item.tier}
                 type="button"
                 onClick={() => setSelectedTier(item.tier)}
-                className={`rounded-md border p-3.5 text-left transition-colors ${
+                className={`rounded-xl border p-4 text-left transition-colors ${
                   active
-                    ? 'border-blue-600 bg-blue-50/70'
-                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                    ? 'border-[#0F5132] bg-emerald-50/70 dark:border-emerald-500 dark:bg-emerald-950/30'
+                    : 'border-[#E6E4DD] bg-[#FAF9F6] hover:bg-[#EFECE4] dark:border-[#262C36] dark:bg-[#12161D] dark:hover:bg-[#1C222B]'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900">{item.label}</span>
+                  <span className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">{item.label}</span>
                   {isUnlocked ? (
-                    <Unlock className="h-3.5 w-3.5 text-teal-700" />
+                    <Unlock className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" />
                   ) : (
-                    <Lock className="h-3.5 w-3.5 text-slate-400" />
+                    <Lock className="h-3.5 w-3.5 text-neutral-400" />
                   )}
                 </div>
-                <p className="mt-1 text-xs text-slate-600">{item.desc}</p>
+                <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{item.desc}</p>
               </button>
             );
           })}
         </div>
 
-        {/* Question Table for Selected Tier */}
         {selectedTier === 4 ? (
-          <div className="rounded-md border border-slate-200 bg-slate-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-col gap-3 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-5 sm:flex-row sm:items-center sm:justify-between dark:border-[#262C36] dark:bg-[#12161D]">
             <div>
-              <p className="text-sm font-bold text-slate-900">
+              <p className="text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
                 Mastercoach Trap-Planted Variant Engine
               </p>
-              <p className="text-xs text-slate-600">
-                Generates verified FA25 scenarios planting RDE2, partial fuel, net Gift Aid, CT marginal relief, CGT 5/3 chattels, IHT 25% CLT, and VAT FRS inclusive traps.
+              <p className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400">
+                Generates fresh FA25 scenarios planting RDE2, partial fuel, net Gift Aid, CT marginal relief, CGT 5/3 chattels, IHT 25% CLT, and VAT FRS inclusive traps.
               </p>
             </div>
             <button
               type="button"
               onClick={handleLaunchTier4Variant}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-700 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-800"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0F5132] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
             >
-              Generate & Drill Variant
+              Generate &amp; Drill Variant
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
         ) : tierFiltered.length === 0 ? (
-          <div className="rounded-md border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
-            <Layers className="mb-2 h-5 w-5 text-slate-400" />
+          <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-6 text-sm text-neutral-600 dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-400">
+            <Layers className="mb-2 h-5 w-5 text-neutral-400" />
             {`No standalone questions in Tier ${selectedTier} filter for Topic ${topic.id} — switch tiers or launch a Tier-4 Trap Variant.`}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-slate-200">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+          <div className="overflow-x-auto rounded-xl border border-[#E6E4DD] dark:border-[#262C36]">
+            <table className="min-w-full divide-y divide-[#EFECE4] text-left text-sm dark:divide-[#262C36]">
               <thead>
-                <tr className="bg-slate-50 text-xs font-semibold text-slate-600">
-                  <th className="px-3.5 py-2.5">Kit ID & Name</th>
-                  <th className="px-3.5 py-2.5">Section</th>
-                  <th className="px-3.5 py-2.5">Type</th>
-                  <th className="px-3.5 py-2.5">Marks</th>
-                  <th className="px-3.5 py-2.5">Citation</th>
-                  <th className="px-3.5 py-2.5">Last Score</th>
-                  <th className="px-3.5 py-2.5 text-right">Drill</th>
+                <tr className="bg-[#FAF9F6] text-xs font-semibold text-neutral-600 dark:bg-[#12161D] dark:text-neutral-400">
+                  <th className="px-4 py-3">Kit ID &amp; Title</th>
+                  <th className="px-4 py-3">Section</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">Marks &amp; Pace</th>
+                  <th className="px-4 py-3">Citation</th>
+                  <th className="px-4 py-3">Last</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
                 {tierFiltered.map((q) => {
                   const last = attemptCountByQ.get(q.id);
                   return (
-                    <tr key={q.id} className="hover:bg-slate-50">
-                      <td className="px-3.5 py-2.5 font-medium text-slate-900">
-                        <span className="font-mono text-xs font-bold text-blue-700 mr-1.5">
+                    <tr key={q.id} className="hover:bg-[#FAF9F6] dark:hover:bg-[#1C222B]">
+                      <td className="px-4 py-3 font-medium text-[#14171A] dark:text-[#F0F3F6]">
+                        <span className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400 mr-2">
                           {q.id}
                         </span>
                         {q.title.replace(/^KIT\s+\w+\s*/, '')}
                       </td>
-                      <td className="px-3.5 py-2.5 font-mono text-xs text-slate-700">
+                      <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-300">
                         Sec {q.section}
                       </td>
-                      <td className="px-3.5 py-2.5 text-xs uppercase text-slate-600">
+                      <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">
                         {q.interaction.replace('_', ' ')}
                       </td>
-                      <td className="px-3.5 py-2.5 font-mono text-xs font-semibold text-slate-800 tabular-nums">
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-[#14171A] dark:text-[#F0F3F6] tabular-nums">
                         {q.marks}m ({Math.round(q.marks * 1.8)}m)
                       </td>
-                      <td className="px-3.5 py-2.5 font-mono text-xs text-slate-500">
+                      <td className="px-4 py-3 font-mono text-xs text-neutral-500 dark:text-neutral-400">
                         {q.kit_page}
                       </td>
-                      <td className="px-3.5 py-2.5 font-mono text-xs font-semibold tabular-nums">
+                      <td className="px-4 py-3 font-mono text-xs font-semibold tabular-nums">
                         {last ? `${last.scored}/${last.avail}` : '—'}
                       </td>
-                      <td className="px-3.5 py-2.5 text-right">
+                      <td className="px-4 py-3 text-right">
                         <button
                           type="button"
                           onClick={() => onLaunchQuestion(q, selectedTier)}
-                          className="rounded-md bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
+                          className="rounded-lg bg-[#0F5132] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
                         >
                           Practice →
                         </button>

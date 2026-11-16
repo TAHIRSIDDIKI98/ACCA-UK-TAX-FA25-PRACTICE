@@ -3,8 +3,8 @@
     "id": "SPEC-Q1",
     "q_num": 1,
     "title": "Specimen Q1",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "National insurance",
+    "topic_id": 11,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -48,8 +48,8 @@
       "trap_of_question": "National Insurance: Class 4 | £ £37,700 (£50,270 – £12,570) × 6% | 2,262",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
-      "speed_trick": "Class 1/1A/4 never deduct pension contributions; benefits go on Class 1A (15%) due 22 July 2026, not Class 1.",
-      "twist_prediction": "Next sitting they could add Employment Allowance (£10,500 per employer) or a director paid unevenly across months."
+      "speed_trick": "NIC ignores pension deductions; cash vouchers = Class 1 (8%/2% Ee, 15% Er >£5k); non-cash benefits = 15% Class 1A; Class 4 = 6%/2%.",
+      "twist_prediction": "Next sitting they could add Employment Allowance (£10,500) eligibility check or mileage paid above 45p flat rate."
     },
     "free_marks_items": []
   },
@@ -57,8 +57,8 @@
     "id": "SPEC-Q2",
     "q_num": 2,
     "title": "Specimen Q2",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "The UK tax system & ethics",
+    "topic_id": 1,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "multi",
@@ -88,7 +88,7 @@
       "1",
       "2"
     ],
-    "full_worked_solution": "1 and 2",
+    "full_worked_solution": "1 and 2 — Where a client refuses to disclose omitted income to HMRC, the firm must advise the client to make full disclosure and report internally under the Money Laundering Regulations (to the MLRO). It must NOT inform HMRC directly (breaches confidentiality) and must NOT warn the client (tipping off offence).",
     "mark_scheme_steps": [
       {
         "id": "spec-2-1",
@@ -101,12 +101,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: 1 and 2",
+      "trap_category": "UK Tax System & Ethics",
+      "trap_of_question": "UK Tax System & Ethics: 1 and 2",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "MLRO flow: Advise disclosure -> Cease acting -> Internal MLRO report -> NEVER tell HMRC or tip off the client.",
+      "twist_prediction": "Next sitting they could test whether a tax adviser may notify HMRC that they have ceased to act (allowed) without giving reasons (mandatory)."
     },
     "free_marks_items": []
   },
@@ -114,7 +114,7 @@
     "id": "SPEC-Q3",
     "q_num": 3,
     "title": "Specimen Q3",
-    "topic": "Cross-Syllabus Specimen Exam",
+    "topic": "Basic income tax computation",
     "topic_id": 2,
     "st_chapter": "FA25 Specimen",
     "section": "A",
@@ -142,8 +142,8 @@
       "trap_of_question": "PA Taper & ANI: £ Personal allowance | 12,570",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
-      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
-      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS PPC; every £2 over £100k cuts £1 PA; NRBs consume basic rate band.",
+      "twist_prediction": "Next sitting they could mix savings starting rate (0% up to £5,000) with non-savings taxable income just under £5,000."
     },
     "free_marks_items": []
   },
@@ -151,8 +151,8 @@
     "id": "SPEC-Q4",
     "q_num": 4,
     "title": "Specimen Q4",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Groups of companies",
+    "topic_id": 15,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -192,12 +192,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Trading Losses",
-      "trap_of_question": "Trading Losses: Maximum loss relief = Lower of: | £ (£180,000 × 9/12) | 135,000",
+      "trap_category": "Groups of Companies",
+      "trap_of_question": "Groups of Companies: Maximum loss relief = Lower of: | £ (£180,000 × 9/12) | 135,000",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Where companies do not have coterminous (matching) year ends, the available profits and losses must be time apportioned, to find the relevant amounts falling within the corresponding accounting period.",
-      "speed_trick": "Check the claim deadline (31 Jan 2028 vs 5 Apr 2030) and whether early-years (3 yrs FIFO) or normal s.64 (current/prior year) applies.",
-      "twist_prediction": "Next sitting they could trigger the £50,000 / 25% cap on income tax reliefs against non-trading income."
+      "speed_trick": "Associated companies (>50%) split £50k/£250k/£1.5m; Group Relief needs 75% + overlap pro-rating; Gains Group needs 75% each link + >50% effective.",
+      "twist_prediction": "Next sitting they could mix non-coterminous year ends requiring pro-rating of BOTH surrendering loss and claimant TTP."
     },
     "free_marks_items": []
   },
@@ -205,8 +205,8 @@
     "id": "SPEC-Q5",
     "q_num": 5,
     "title": "Specimen Q5",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Tax administration: companies",
+    "topic_id": 16,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -246,12 +246,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: (£970,000 × 25%)/4 = £60,625 The profit threshold is shared between associated companies, in this case two. Sizeable Ltd",
+      "trap_category": "Company Tax Admin",
+      "trap_of_question": "Company Tax Admin: (£970,000 × 25%)/4 = £60,625 The profit threshold is shared between associated companies, in this case two. Sizeable Ltd",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The profit threshold is shared between associated companies, in this case two. Sizeable Ltd exceeded the threshold of £750,000 (£1,500,000/2) in the current and the previous period. As this is not the first period that Sizeable Ltd is a large company, the corp",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "Small/medium pays 9m+1d after AP end; Large (>£1.5m/(1+assoc)) pays 4 QIPs (M7/10/13/16 day 14) subject to 1-yr grace rule; records = 6 yrs.",
+      "twist_prediction": "Next sitting they could test short-period QIP dates (final instalment 14th of month 4 after AP end) or iXBRL filing options."
     },
     "free_marks_items": []
   },
@@ -259,8 +259,8 @@
     "id": "SPEC-Q6",
     "q_num": 6,
     "title": "Specimen Q6",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Tax administration: companies",
+    "topic_id": 16,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -300,12 +300,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: £60,000 × 8.5% × 6/12 = £2,550 (period 1 October 2026 to 31 March 2027) As Lateness Ltd is not a large company, the corporation tax would have been due 9 months",
+      "trap_category": "Company Tax Admin",
+      "trap_of_question": "Company Tax Admin: £60,000 × 8.5% × 6/12 = £2,550 (period 1 October 2026 to 31 March 2027) As Lateness Ltd is not a large company, the corporation tax would have been due 9 months",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "As Lateness Ltd is not a large company, the corporation tax would have been due 9 months and 1 day after the end of the accounting period (1 October 2026).",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "Small/medium pays 9m+1d after AP end; Large (>£1.5m/(1+assoc)) pays 4 QIPs (M7/10/13/16 day 14) subject to 1-yr grace rule; records = 6 yrs.",
+      "twist_prediction": "Next sitting they could test short-period QIP dates (final instalment 14th of month 4 after AP end) or iXBRL filing options."
     },
     "free_marks_items": []
   },
@@ -313,8 +313,8 @@
     "id": "SPEC-Q7",
     "q_num": 7,
     "title": "Specimen Q7",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "CGT: special rules",
+    "topic_id": 18,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -354,12 +354,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: £2,700 (£8,700 – £6,000) × 5/3 = £4,500 This is less than £4,900 (£8,700 – £3,800).",
+      "trap_category": "CGT Losses & Matching",
+      "trap_of_question": "CGT Losses & Matching: £2,700 (£8,700 – £6,000) × 5/3 = £4,500 This is less than £4,900 (£8,700 – £3,800).",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The chattels rules apply to the disposal of the antique table. The gross proceeds are ˃£6,000 and the cost is ≤£6,000 therefore the treatment is as follows: The gain is calculated as normal i.e. Proceeds – cost The gain must not exceed the maximum amount of 5/",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "Chattels cost ≤£6k & sold >£6k cap gain at 5/3 × (GP − £6,000); PRR last 9 months exempt; Letting relief needs shared occupation.",
+      "twist_prediction": "Next sitting they could test an antique/painting disposal vs a wasting chattel (≤50 yrs exempt unless CAs claimed)."
     },
     "free_marks_items": []
   },
@@ -367,15 +367,15 @@
     "id": "SPEC-Q8",
     "q_num": 8,
     "title": "Specimen Q8",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Inheritance tax",
+    "topic_id": 22,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "number",
     "interaction": "numeric_input",
     "marks": 2,
-    "scenario": "On 14 November 2025, Jane made a cash gift to a trust of £800,000 (after deducting all\navailable exemptions). Jane paid the inheritance tax arising from this gift. Jane has not made\nany other lifetime gifts.\nWhat amount of lifetime inheritance tax would have been payable in respect of Jane’s gift",
-    "requirement": "to the trust?",
+    "scenario": "On 14 November 2025, Jane made a cash gift to a trust of £800,000 (after deducting all available exemptions). Jane paid the inheritance tax arising from this gift. Jane has not made any other lifetime gifts.",
+    "requirement": "What amount of lifetime inheritance tax would have been payable in respect of Jane’s gift to the trust?",
     "options": [],
     "correct_answer": "118750",
     "full_worked_solution": "£118,750\n£\nChargeable amount  |  800,000\nNil rate band available at the date of the gift  |  (325,000)\n–––––––\nTaxable amount  |  475,000\n–––––––\nIHT payable at 25%  |  118,750\n–––––––",
@@ -391,12 +391,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: £ Chargeable amount | 800,000",
+      "trap_category": "Inheritance Tax",
+      "trap_of_question": "Inheritance Tax: £ Chargeable amount | 800,000",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "PET = £0 lifetime tax; CLT donor pays = 25% gross-up; Taper cuts TAX (not value) after 3 yrs; Death life policy = full proceeds; RNRB direct descendants.",
+      "twist_prediction": "Next sitting they could include multiple small gifts to the same grandchild (>£250 invalidates ALL for that person) or transferable spouse NRB %."
     },
     "free_marks_items": []
   },
@@ -404,14 +404,14 @@
     "id": "SPEC-Q9",
     "q_num": 9,
     "title": "Specimen Q9",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Inheritance tax",
+    "topic_id": 22,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "multi",
     "interaction": "matrix",
     "marks": 2,
-    "scenario": "During the tax year 2025/26, Mildred made four cash gifts to her grandchildren:",
+    "scenario": "During the tax year 2025/26, Mildred made four cash gifts to her grandchildren.\nFor each of the gifts listed below, select whether the gift will be exempt or not from inheritance tax under the small gifts exemption.",
     "requirement": "Select whether each gift is Exempt or Not exempt.",
     "options": {
       "columns": [
@@ -419,8 +419,6 @@
         "NOT EXEMPT"
       ],
       "rows": [
-        "For each of the gifts listed below, select whether the gift will be exempt or not from",
-        "inheritance tax under the small gifts exemption.",
         "£400 to Alfred",
         "£140 to Minnie",
         "A further £280 to Minnie",
@@ -454,12 +452,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: £175 to Winifred is exempt Other gifts are not exempt",
+      "trap_category": "Inheritance Tax",
+      "trap_of_question": "Inheritance Tax: £175 to Winifred is exempt Other gifts are not exempt",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "When determining whether the small gifts exemption applies; the total gifts to each recipient during the tax year must be considered. If the total value of gifts to one individual exceeds £250, the small gifts exemption cannot be applied to any of the gifts.",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "PET = £0 lifetime tax; CLT donor pays = 25% gross-up; Taper cuts TAX (not value) after 3 yrs; Death life policy = full proceeds; RNRB direct descendants.",
+      "twist_prediction": "Next sitting they could include multiple small gifts to the same grandchild (>£250 invalidates ALL for that person) or transferable spouse NRB %."
     },
     "free_marks_items": []
   },
@@ -467,8 +465,8 @@
     "id": "SPEC-Q10",
     "q_num": 10,
     "title": "Specimen Q10",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "VAT: administration & overseas",
+    "topic_id": 24,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -508,12 +506,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: £49,750 × 120/100 at 12% = £7,164 The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
+      "trap_category": "VAT Compliance & FRS",
+      "trap_of_question": "VAT Compliance & FRS: £49,750 × 120/100 at 12% = £7,164 The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "Flat Rate % hits VAT-INCLUSIVE total turnover (incl. exempt); 4 submission penalty points = £200; Pay penalties 0% ≤15d / 3% 16–30d / 6% >30d.",
+      "twist_prediction": "Next sitting they could test resetting 4 late-submission points (needs 4 clean quarters AND all overdue returns submitted)."
     },
     "free_marks_items": []
   },
@@ -521,8 +519,8 @@
     "id": "SPEC-Q11",
     "q_num": 11,
     "title": "Specimen Q11",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "CGT: special rules",
+    "topic_id": 18,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "multi",
@@ -552,7 +550,7 @@
       "1",
       "3"
     ],
-    "full_worked_solution": "1 and 3",
+    "full_worked_solution": "1 and 3 — A car suitable for private use and UK Government securities (gilts) are always exempt assets for capital gains tax purposes.\nChattels are only exempt if both cost and gross disposal proceeds are £6,000 or less (or if wasting chattels with no capital allowances claimed). A house is only exempt to the extent covered by Private Residence Relief (PPR).",
     "mark_scheme_steps": [
       {
         "id": "spec-11-1",
@@ -565,12 +563,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: 1 and 3",
+      "trap_category": "CGT Losses & Matching",
+      "trap_of_question": "CGT Losses & Matching: 1 and 3",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "Chattels cost ≤£6k & sold >£6k cap gain at 5/3 × (GP − £6,000); PRR last 9 months exempt; Letting relief needs shared occupation.",
+      "twist_prediction": "Next sitting they could test an antique/painting disposal vs a wasting chattel (≤50 yrs exempt unless CAs claimed)."
     },
     "free_marks_items": []
   },
@@ -578,7 +576,7 @@
     "id": "SPEC-Q12",
     "q_num": 12,
     "title": "Specimen Q12",
-    "topic": "Cross-Syllabus Specimen Exam",
+    "topic": "Basic income tax computation",
     "topic_id": 2,
     "st_chapter": "FA25 Specimen",
     "section": "A",
@@ -623,8 +621,8 @@
       "trap_of_question": "Savings & Dividend Bands: £20,000 – £8,000 = £12,000 The overall ISA investment limit for the tax year 2025/26 is £20,000.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The overall ISA investment limit for the tax year 2025/26 is £20,000.",
-      "speed_trick": "Order income strictly Non-savings -> Savings -> Dividends; remember the £500 dividend / £1,000 savings NRBs consume basic rate band.",
-      "twist_prediction": "Next sitting they could push taxable income just over £37,700 or £125,140 so NRBs reduce to £500 or £0."
+      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS PPC; every £2 over £100k cuts £1 PA; NRBs consume basic rate band.",
+      "twist_prediction": "Next sitting they could mix savings starting rate (0% up to £5,000) with non-savings taxable income just under £5,000."
     },
     "free_marks_items": []
   },
@@ -632,8 +630,8 @@
     "id": "SPEC-Q13",
     "q_num": 13,
     "title": "Specimen Q13",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Tax administration: individuals",
+    "topic_id": 12,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "multi",
@@ -672,12 +670,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Specimen Exam",
-      "trap_of_question": "Specimen Exam: 31 January 2032 and 31 January 2032 Taxpayers with a business must retain all of their records (not just business records), until",
+      "trap_category": "SA Tax Admin & Records",
+      "trap_of_question": "SA Tax Admin & Records: 31 January 2032 and 31 January 2032 Taxpayers with a business must retain all of their records (not just business records), until",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Taxpayers with a business must retain all of their records (not just business records), until 5 years from the 31 January filing date.",
-      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
-      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+      "speed_trick": "POAs = 50% prior IT + Class 4 (no CGT); 5% late penalties hit balancing payment only; business/property keeps ALL records 5 yrs (31 Jan 2032).",
+      "twist_prediction": "Next sitting they could test the late-return compliance check notice deadline (12m from next quarter day after actual filing)."
     },
     "free_marks_items": []
   },
@@ -685,8 +683,8 @@
     "id": "SPEC-Q14",
     "q_num": 14,
     "title": "Specimen Q14",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Company losses",
+    "topic_id": 14,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -726,12 +724,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Trading Losses",
-      "trap_of_question": "Trading Losses: The maximum loss relief is the lower of: • | Remaining loss: £62,000 (£105,000 – £43,000)",
+      "trap_category": "Company Losses",
+      "trap_of_question": "Company Losses: The maximum loss relief is the lower of: • | Remaining loss: £62,000 (£105,000 – £43,000)",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
-      "speed_trick": "Check the claim deadline (31 Jan 2028 vs 5 Apr 2030) and whether early-years (3 yrs FIFO) or normal s.64 (current/prior year) applies.",
-      "twist_prediction": "Next sitting they could trigger the £50,000 / 25% cap on income tax reliefs against non-trading income."
+      "speed_trick": "Company CY/12m CB is all-or-nothing before QCDs (must claim CY before CB); brought-forward trading losses CAN be restricted to preserve QCDs.",
+      "twist_prediction": "Next sitting they could test whether QCDs are wasted on a 12-month carry-back vs restricted on carry-forward."
     },
     "free_marks_items": []
   },
@@ -739,8 +737,8 @@
     "id": "SPEC-Q15",
     "q_num": 15,
     "title": "Specimen Q15",
-    "topic": "Cross-Syllabus Specimen Exam",
-    "topic_id": 2,
+    "topic": "Income tax: additional aspects (Residence)",
+    "topic_id": 3,
     "st_chapter": "FA25 Specimen",
     "section": "A",
     "type": "mcq",
@@ -985,12 +983,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "PA Taper & ANI",
-      "trap_of_question": "PA Taper & ANI: OT 1 (Q16): Capital gains tax liability – 2025/26",
+      "trap_category": "CGT Losses & Matching",
+      "trap_of_question": "CGT Losses & Matching: OT 1 (Q16): Capital gains tax liability – 2025/26",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Delroy would have been able to claim business asset disposal relief (BADR) on disposal of the shares, as he was an employee and held at least 5% of the shares for at least 2 years prior to disposal. However, Grant is not eligible for BADR, as he was not an emp",
-      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
-      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+      "speed_trick": "Offset CY capital losses BEFORE £3,000 AEA, and restrict b/f capital losses AFTER AEA; BADR (14%) consumes basic rate band first.",
+      "twist_prediction": "Next sitting they could combine residential property + shares at 18%/24% or test connected-party market value substitution."
     },
     "free_marks_items": [
       "Isolate facts per OT item",
@@ -1150,7 +1148,7 @@
           "2",
           "3"
         ],
-        "worked_solution": "2 and 3"
+        "worked_solution": "2 and 3 — Gifts are exempt under normal expenditure out of income if they are habitual (form part of normal expenditure), are made out of income (taking one year with another), and leave Opal with sufficient after-tax income to maintain her normal standard of living. There is no 10% cap and no monthly/quarterly frequency requirement."
       }
     ],
     "correct_answer": [
@@ -1199,12 +1197,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "PA Taper & ANI",
-      "trap_of_question": "PA Taper & ANI: OT 1 (Q21): £",
+      "trap_category": "Inheritance Tax",
+      "trap_of_question": "Inheritance Tax: OT 1 (Q21): £",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Repayment and interest only mortgages should be deducted from the value of the property in the death estate. An insurance policy on the life of the deceased should be included in the death estate at the proceeds received not the market value while they are ali",
-      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
-      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+      "speed_trick": "PET = £0 lifetime tax; CLT donor pays = 25% gross-up; Taper cuts TAX (not value) after 3 yrs; Death life policy = full proceeds; RNRB direct descendants.",
+      "twist_prediction": "Next sitting they could include multiple small gifts to the same grandchild (>£250 invalidates ALL for that person) or transferable spouse NRB %."
     },
     "free_marks_items": [
       "Isolate facts per OT item",
@@ -1336,7 +1334,7 @@
           }
         ],
         "correct_answer": "D",
-        "worked_solution": "D"
+        "worked_solution": "D — Having reached the 4-point penalty threshold, Glacier Ltd must satisfy BOTH compliance conditions to reset its penalty points to zero: submit four consecutive quarterly VAT returns on time AND pay the related VAT liabilities on time (for the required compliance period)."
       },
       {
         "sub_num": 5,
@@ -1413,12 +1411,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "UK Residence",
-      "trap_of_question": "UK Residence: OT 1 (Q26): (£9,400 (£44,600 – £35,200) × 20%) + £1,600 = £3,480",
+      "trap_category": "VAT Compliance & FRS",
+      "trap_of_question": "VAT Compliance & FRS: OT 1 (Q26): (£9,400 (£44,600 – £35,200) × 20%) + £1,600 = £3,480",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The basic tax point for a supply of services is the date when they are completed, but if a VAT invoice is issued or payment received before the basic tax point, then this becomes the actual tax point. Therefore, the tax point for the additional contract is whe",
-      "speed_trick": "Always test Automatic Non-UK -> Automatic UK -> Sufficient Ties strictly in order; never jump straight to ties.",
-      "twist_prediction": "Next sitting they could flip whether the taxpayer was UK resident in any of the previous 3 tax years (leaver vs arriver ties)."
+      "speed_trick": "Historic £90k: notify 30 days from month end, charge from 1st day of 2nd month after; Bad debt relief = 6m from DUE date; Overseas entertaining recoverable.",
+      "twist_prediction": "Next sitting they could test pre-registration input VAT limits (4 yrs goods on hand vs 6 months services) or deposit tax point."
     },
     "free_marks_items": [
       "Isolate facts per OT item",
@@ -1473,12 +1471,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "PA Taper & ANI",
-      "trap_of_question": "PA Taper & ANI: SARAH The total tax and NIC cost if Sarah incorporates her business is £12,549 (£4,317 (W1) + £1,394",
+      "trap_category": "Corporation Tax",
+      "trap_of_question": "Corporation Tax: SARAH The total tax and NIC cost if Sarah incorporates her business is £12,549 (£4,317 (W1) + £1,394",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
-      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
-      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+      "speed_trick": "Augmented profits = TTP + non-associated exempt dividends; divide £50k/£250k/£1.5m by (1 + associates) and × months/12.",
+      "twist_prediction": "Next sitting they could include a long period of account (>12m) requiring a 12m + remainder split or marginal relief 3/200 calculation."
     },
     "free_marks_items": [
       "Show Personal Allowance line explicitly (even if £0 when ANI > £125,140)"
@@ -1546,8 +1544,8 @@
       "trap_of_question": "Cars & Fuel Benefits: SIMON (a) Simon – Taxable income 2025/26",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The property was purchased more than six years before first being provided, so the benefit is based on the market value when first provided. (W2) Trading profit 1 | Simon’s share of the partnership’s trading profit for the period ended 31 March 2026 is £11,190",
-      "speed_trick": "Compute % first (round CO2 DOWN to nearest 5, check RDE2, apply 37% cap), then list price × % × months/12 in one line.",
-      "twist_prediction": "Next sitting they could change the car to non-RDE2 diesel (+4%, max 37%) or shift availability to 6 October (6/12)."
+      "speed_trick": "Always use LIST PRICE (not paid), round CO2 DOWN to nearest 5, waive +4% if RDE2-compliant, and time-apportion months/12.",
+      "twist_prediction": "Next sitting they could insert a partial private-fuel contribution (0% reduction on fuel charge) or the >6-year MV accommodation rule."
     },
     "free_marks_items": [
       "Deduct PAYE from income tax liability (not from income)",
@@ -1618,12 +1616,12 @@
     "past_exam": "ACCA Specimen Exam (FA25)",
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
-      "trap_category": "Cars & Fuel Benefits",
-      "trap_of_question": "Cars & Fuel Benefits: NAIVE LTD (a) Naive Ltd – Corporation tax computation for the year ended 31 March 2026",
+      "trap_category": "Corporation Tax",
+      "trap_of_question": "Corporation Tax: NAIVE LTD (a) Naive Ltd – Corporation tax computation for the year ended 31 March 2026",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Corporation tax is payable at 25% as the taxable total profits exceed £250,000. Non-trade loan relationship income is taxable on the accruals basis and it is therefore the interest receivable rather than the interest paid which should be taxed. Workings (W1) T",
-      "speed_trick": "Compute % first (round CO2 DOWN to nearest 5, check RDE2, apply 37% cap), then list price × % × months/12 in one line.",
-      "twist_prediction": "Next sitting they could change the car to non-RDE2 diesel (+4%, max 37%) or shift availability to 6 October (6/12)."
+      "speed_trick": "Augmented profits = TTP + non-associated exempt dividends; divide £50k/£250k/£1.5m by (1 + associates) and × months/12.",
+      "twist_prediction": "Next sitting they could include a long period of account (>12m) requiring a 12m + remainder split or marginal relief 3/200 calculation."
     },
     "free_marks_items": [
       "Indicate non-taxable / non-deductible items with explicit zero (0)"

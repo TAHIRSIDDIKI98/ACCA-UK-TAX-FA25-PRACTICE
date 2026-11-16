@@ -12,12 +12,14 @@ import {
   ChevronUp,
   Clock,
   HelpCircle,
+  ListFilter,
   Pause,
   Play,
   RotateCcw,
   Search,
   ShieldCheck,
   Sparkles,
+  X,
   XCircle,
 } from 'lucide-react';
 import { TOPICS } from '../data/taxReference';
@@ -28,7 +30,10 @@ import {
   type GradedResult,
   type UserQuestionAnswer,
 } from '../engine/scoring';
-import { evaluateArithmeticExpression, generateTrapVariant } from '../engine/taxCalculators';
+import {
+  generateTrapVariant,
+  getProformaTemplateForTopic,
+} from '../engine/taxCalculators';
 import type {
   AppState,
   CaseSubQuestion,
@@ -37,6 +42,8 @@ import type {
   McqOption,
   PairDropdownGroup,
 } from '../types/tx';
+import { ScenarioText } from './ScenarioText';
+import { TaxCalculatorPad } from './TaxCalculatorPad';
 import { TaxTablesDrawer } from './TaxTablesView';
 
 interface QuestionPlayerProps {
@@ -70,68 +77,6 @@ const TOPIC_AREA_BY_ID: Record<number, string> = Object.fromEntries(
   TOPICS.map((t) => [t.id, t.syllabusArea])
 );
 
-function getProformaTemplateForTopic(topicId: number): string {
-  if (topicId >= 13 && topicId <= 16) {
-    return [
-      'Corporation Tax Computation (TTP & Marginal Relief)',
-      'Adjusted trading profit (W1): ',
-      'Non-trading loan relationship / Property income: ',
-      'Chargeable gains: ',
-      'Exempt item / Disallowable item: 0',
-      'Less: Qualifying charitable donations (QCDs): (0)',
-      '= Taxable Total Profits (TTP): ',
-      'Plus: Exempt ABGH dividends: ',
-      '= Augmented Profits: ',
-      'Less: Marginal relief [(U - A) * (N / A) * 3/200]: (0)',
-    ].join('\n');
-  }
-  if (topicId >= 17 && topicId <= 21) {
-    return [
-      '2025/26 Capital Gains Tax Computation',
-      'Disposal proceeds: ',
-      'Less: Incidental disposal costs: (0)',
-      'Less: Original cost / Enhancement expenditure: (0)',
-      '= Chargeable Gain / (Allowable Loss): ',
-      'Exempt asset / Chattel <= 6,000: 0',
-      'Less: Current year / b/f capital losses: (0)',
-      'Less: Annual Exempt Amount: (3,000)',
-      '= Taxable Gain (@ 14% BADR / 18% / 24%): ',
-    ].join('\n');
-  }
-  if (topicId === 22) {
-    return [
-      'Inheritance Tax Computation (FA25)',
-      'Transfer of value (diminution in estate): ',
-      'Less: Spouse / Small gift / Normal expenditure exemption: (0)',
-      'Less: Annual Exemption (3,000 CY + 3,000 b/f): (6,000)',
-      '= Chargeable Transfer (PET / CLT): ',
-      'Less: Nil Rate Band (325,000 less prior 7-yr transfers): ',
-      '+ Residence Nil Rate Band (175,000 max for death estate): ',
-      '= Taxable Chargeable Amount (@ 20% / 25% gross / 40%): ',
-    ].join('\n');
-  }
-  if (topicId === 23 || topicId === 24) {
-    return [
-      'VAT Return & Compliance Summary (FA25)',
-      'Output VAT (20% standard-rated / 0% zero-rated): ',
-      'Less: Recoverable Input VAT: (0)',
-      'Non-deductible client entertaining / private motor car: 0',
-      'Bad debt relief (>6 months overdue from payment date): (0)',
-      '= Net VAT Payable / (Repayable): ',
-      'Online Return & Payment Due: 1 month + 7 days after quarter end',
-    ].join('\n');
-  }
-  return [
-    '2025/26 Income Tax Computation (NS | Savings | Dividends)',
-    'Employment / Trading / Property income (W1): ',
-    'Exempt / Non-taxable item: 0',
-    'Less: Personal Allowance (12,570 — check ANI > 100,000): (12,570)',
-    '= Taxable Income (NS -> Savings -> Dividends): ',
-    'Less: 20% Reducers / PAYE deducted: (0)',
-    'Balancing payment & POA due: 31 January 2027',
-  ].join('\n');
-}
-
 export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
   question,
   allQuestions,
@@ -159,8 +104,10 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
   const [aiCritique, setAiCritique] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [cbeCheckerOpen, setCbeCheckerOpen] = useState(true);
+  const [crScoreConfirmed, setCrScoreConfirmed] = useState(false);
 
-  // Quick Question Switcher Filters
+  // Slide-out Bank Queue Drawer state (keeps player viewport clean & focused)
+  const [queueOpen, setQueueOpen] = useState(false);
   const [secFilter, setSecFilter] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [areaFilter, setAreaFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'unattempted' | 'missed'>('ALL');
@@ -206,7 +153,44 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     return () => window.clearInterval(id);
   }, [timerRunning, locked]);
 
-  // Top 2 recurring traps watchlist
+  // Keyboard shortcuts for fast practice flow
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const k = e.key.toLowerCase();
+      if (k === 'c') {
+        e.preventDefault();
+        setCalcOpen((v) => !v);
+        return;
+      }
+      if (k === 't') {
+        e.preventDefault();
+        setTablesOpen((v) => !v);
+        return;
+      }
+      if (k === 'h' && !locked) {
+        e.preventDefault();
+        setShowHint((v) => !v);
+        return;
+      }
+      if (!locked && question.type === 'mcq' && (question.interaction === 'single_mcq' || question.interaction === 'grid_2x2')) {
+        const opts = Array.isArray(question.options) ? (question.options as McqOption[]) : [];
+        const mapIdx = ['a', 'b', 'c', 'd'].indexOf(k);
+        const numIdx = ['1', '2', '3', '4'].indexOf(k);
+        const picked = opts[mapIdx >= 0 ? mapIdx : numIdx];
+        if (picked) {
+          e.preventDefault();
+          setAnswer(picked.key);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [locked, question]);
+
   const watchlistTraps = useMemo(() => {
     return Object.values(appState.trapLedger)
       .filter((t) => t.hitCount > 0)
@@ -244,9 +228,6 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
   }, [allQuestions, secFilter, areaFilter, statusFilter, searchQ, attemptedIds, missedIds]);
 
   const currentIdx = filteredList.findIndex((item) => item.id === question.id);
-  const calcResult = useMemo(() => evaluateArithmeticExpression(calcExpr), [calcExpr]);
-
-  const [crScoreConfirmed, setCrScoreConfirmed] = useState(false);
 
   const handleSubmit = (skipReveal = false) => {
     const elapsed = Math.max(1, budgetSeconds - secondsLeft);
@@ -256,7 +237,6 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
         ? auditEasyMarks(answer, question)
         : { capturedCount: 0, totalChecks: 0, checks: [] };
 
-    // Initialize self-marking step checkboxes
     const initialChecks: Record<string, boolean> = {};
     if (result.isAutoGraded && result.isFullyCorrect) {
       question.mark_scheme_steps.forEach((s) => {
@@ -269,7 +249,6 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     setTimerRunning(false);
     setCrScoreConfirmed(false);
 
-    // For CR questions (unless skipped), wait until student ticks their step mark scheme checkboxes
     if (question.type === 'cr' && !skipReveal) {
       return;
     }
@@ -291,7 +270,6 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     }
   };
 
-  // Recalculate CR / step self-mark score dynamically when checkboxes toggle
   const selfMarkedScore = useMemo(() => {
     if (!locked) return 0;
     if (question.type !== 'cr' && graded?.isAutoGraded) {
@@ -362,11 +340,11 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     if (interaction === 'numeric_input') {
       return (
         <div className="max-w-xs">
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+          <label className="mb-1.5 block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
             Enter whole £ figure (no commas needed):
           </label>
-          <div className="flex items-center rounded-md border border-slate-300 bg-white focus-within:border-blue-600">
-            <span className="border-r border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm font-bold text-slate-700">
+          <div className="flex items-center rounded-xl border border-[#D8D4C8] bg-white focus-within:border-[#0F5132] dark:border-[#303846] dark:bg-[#12161D] dark:focus-within:border-emerald-500">
+            <span className="border-r border-[#E6E4DD] bg-[#FAF9F6] px-3.5 py-2.5 font-mono text-sm font-bold text-neutral-700 dark:border-[#262C36] dark:bg-[#1C222B] dark:text-neutral-200">
               £
             </span>
             <input
@@ -376,7 +354,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               value={typeof val === 'string' ? val : ''}
               onChange={(e) => onChange(e.target.value)}
               placeholder="e.g. 7420"
-              className="w-full px-3 py-2 font-mono text-sm font-semibold text-slate-900 focus:outline-none disabled:bg-slate-50"
+              className="w-full bg-transparent px-3.5 py-2.5 font-mono text-sm font-semibold text-[#14171A] focus:outline-none disabled:opacity-70 dark:text-[#F0F3F6]"
             />
           </div>
         </div>
@@ -389,29 +367,31 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
         ? val
         : {}) as Record<string, string[]>;
       return (
-        <div className="overflow-x-auto rounded-md border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-xs">
+        <div className="overflow-x-auto rounded-xl border border-[#E6E4DD] dark:border-[#262C36]">
+          <table className="min-w-full divide-y divide-[#EFECE4] text-xs dark:divide-[#262C36]">
             <thead>
-              <tr className="bg-slate-50 font-semibold text-slate-700">
-                <th className="px-3 py-2 text-left">Item / Statement</th>
+              <tr className="bg-[#FAF9F6] font-semibold text-neutral-700 dark:bg-[#12161D] dark:text-neutral-300">
+                <th className="px-3.5 py-2.5 text-left">Item / Statement</th>
                 {mat.columns.map((col, cIdx) => (
-                  <th key={cIdx} className="px-3 py-2 text-center">
+                  <th key={cIdx} className="px-3.5 py-2.5 text-center">
                     {col}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-[#EFECE4] bg-white dark:divide-[#262C36] dark:bg-[#161B22]">
               {mat.rows.map((rowText, rIdx) => {
                 const rowKey = String(rIdx);
                 const selectedCols = curObj[rowKey] ?? [];
                 return (
                   <tr key={rIdx}>
-                    <td className="px-3 py-2.5 font-medium text-slate-800">{rowText}</td>
+                    <td className="px-3.5 py-3 font-medium text-[#14171A] dark:text-[#F0F3F6]">
+                      {rowText}
+                    </td>
                     {mat.columns.map((col, cIdx) => {
                       const checked = selectedCols.includes(col);
                       return (
-                        <td key={cIdx} className="px-3 py-2.5 text-center">
+                        <td key={cIdx} className="px-3.5 py-3 text-center">
                           <input
                             type="checkbox"
                             disabled={locked}
@@ -422,7 +402,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                                 : [...selectedCols, col];
                               onChange({ ...curObj, [rowKey]: nextCols });
                             }}
-                            className="h-4 w-4 rounded border-slate-300 text-blue-700"
+                            className="h-4 w-4 rounded border-neutral-300 text-[#0F5132]"
                           />
                         </td>
                       );
@@ -444,9 +424,11 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
           {groups.map((grp, idx) => (
             <div
               key={idx}
-              className="flex flex-col gap-1.5 rounded-md border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-2 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-3.5 sm:flex-row sm:items-center sm:justify-between dark:border-[#262C36] dark:bg-[#12161D]"
             >
-              <span className="text-xs font-semibold text-slate-800">{grp.group}</span>
+              <span className="text-xs font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                {grp.group}
+              </span>
               <select
                 disabled={locked}
                 value={curArr[idx] ?? ''}
@@ -455,7 +437,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                   next[idx] = e.target.value;
                   onChange(next);
                 }}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-900"
+                className="rounded-lg border border-[#D8D4C8] bg-white px-3 py-2 text-xs font-medium text-[#14171A] dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6]"
               >
                 <option value="">Select option...</option>
                 {grp.choices.map((ch, cIdx) => (
@@ -474,19 +456,19 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
       const opts = options as McqOption[];
       const curArr = Array.isArray(val) ? (val as string[]) : [];
       return (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-500">
-            Select all matching options (check boxes):
+        <div className="space-y-2.5">
+          <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+            Select all matching options:
           </p>
           {opts.map((opt) => {
             const checked = curArr.includes(opt.key);
             return (
               <label
                 key={`${prefixKey}-${opt.key}`}
-                className={`flex cursor-pointer items-start gap-3 rounded-md border px-3.5 py-2.5 text-sm transition-colors ${
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
                   checked
-                    ? 'border-blue-600 bg-blue-50/70'
-                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                    ? 'border-[#0F5132] bg-emerald-50/70 dark:border-emerald-500 dark:bg-emerald-950/30'
+                    : 'border-[#E6E4DD] bg-white hover:bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:bg-[#1C222B]'
                 }`}
               >
                 <input
@@ -499,13 +481,13 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                       : [...curArr, opt.key];
                     onChange(next);
                   }}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-700"
+                  className="mt-1 h-4 w-4 rounded border-neutral-300 text-[#0F5132]"
                 />
                 <span>
-                  <span className="font-mono text-xs font-bold text-slate-700 mr-2">
+                  <span className="font-mono text-xs font-bold text-neutral-500 dark:text-neutral-400 mr-2">
                     {opt.key}.
                   </span>
-                  <span className="text-slate-900">{opt.text}</span>
+                  <span className="text-[#14171A] dark:text-[#F0F3F6]">{opt.text}</span>
                 </span>
               </label>
             );
@@ -514,20 +496,19 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
       );
     }
 
-    // Default single_mcq / grid_2x2
     const opts = Array.isArray(options) ? (options as McqOption[]) : [];
     const curVal = typeof val === 'string' ? val : '';
     return (
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {opts.map((opt) => {
           const selected = curVal === opt.key;
           return (
             <label
               key={`${prefixKey}-${opt.key}`}
-              className={`flex cursor-pointer items-start gap-3 rounded-md border px-3.5 py-2.5 text-sm transition-colors ${
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
                 selected
-                  ? 'border-blue-600 bg-blue-50/70'
-                  : 'border-slate-200 bg-white hover:bg-slate-50'
+                  ? 'border-[#0F5132] bg-emerald-50/70 dark:border-emerald-500 dark:bg-emerald-950/30'
+                  : 'border-[#E6E4DD] bg-white hover:bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:bg-[#1C222B]'
               }`}
             >
               <input
@@ -536,13 +517,13 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 disabled={locked}
                 checked={selected}
                 onChange={() => onChange(opt.key)}
-                className="mt-1 h-4 w-4 border-slate-300 text-blue-700"
+                className="mt-1 h-4 w-4 border-neutral-300 text-[#0F5132]"
               />
               <span>
-                <span className="font-mono text-xs font-bold text-slate-700 mr-2">
+                <span className="font-mono text-xs font-bold text-neutral-500 dark:text-neutral-400 mr-2">
                   {opt.key}.
                 </span>
-                <span className="text-slate-900">{opt.text}</span>
+                <span className="text-[#14171A] dark:text-[#F0F3F6]">{opt.text}</span>
               </span>
             </label>
           );
@@ -570,63 +551,169 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     <div className="space-y-5">
       <TaxTablesDrawer open={tablesOpen} onClose={() => setTablesOpen(false)} />
 
-      {/* Quick Question Browser Bar */}
-      <div className="flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-white p-3.5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
-            <input
-              type="text"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="Jump to Q# or topic..."
-              className="w-48 rounded-md border border-slate-300 bg-white py-1.5 pl-8 pr-2.5 text-xs text-slate-900"
-            />
-          </div>
-
-          <div className="inline-flex rounded-md border border-slate-200 bg-slate-100 p-0.5">
-            {(['ALL', 'A', 'B', 'C'] as const).map((s) => (
+      {/* Slide-out Question Queue Drawer */}
+      {queueOpen && (
+        <div className="fixed inset-0 z-50 flex justify-start bg-black/40 backdrop-blur-[1px]">
+          <div className="flex h-full w-full max-w-md flex-col border-r border-[#E6E4DD] bg-white shadow-2xl dark:border-[#262C36] dark:bg-[#161B22]">
+            <div className="flex items-center justify-between border-b border-[#E6E4DD] px-5 py-4 dark:border-[#262C36]">
+              <div>
+                <h2 className="font-display text-base font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                  Question Bank Queue ({filteredList.length}/{allQuestions.length})
+                </h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Kaplan TX-UK FA25 Kit + Specimen
+                </p>
+              </div>
               <button
-                key={s}
                 type="button"
-                onClick={() => setSecFilter(s)}
-                className={`rounded px-2.5 py-1 text-xs font-semibold ${
-                  secFilter === s
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
+                aria-label="Close question queue"
+                onClick={() => setQueueOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E6E4DD] text-neutral-600 hover:bg-neutral-100 dark:border-[#262C36] dark:text-neutral-300"
               >
-                {s === 'ALL' ? 'All Sec' : `Sec ${s}`}
+                <X className="h-4 w-4" />
               </button>
-            ))}
+            </div>
+
+            <div className="space-y-3 border-b border-[#EFECE4] p-4 dark:border-[#262C36]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                <input
+                  type="text"
+                  value={searchQ}
+                  onChange={(e) => setSearchQ(e.target.value)}
+                  placeholder="Jump to Q#, title, or topic..."
+                  className="w-full rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] py-2 pl-8 pr-3 text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {(['ALL', 'A', 'B', 'C'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSecFilter(s)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                      secFilter === s
+                        ? 'bg-[#0F5132] text-white dark:bg-emerald-600'
+                        : 'bg-[#FAF9F6] text-neutral-600 hover:bg-[#EFECE4] dark:bg-[#1C222B] dark:text-neutral-300'
+                    }`}
+                  >
+                    {s === 'ALL' ? 'All Sec' : `Sec ${s}`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  aria-label="Filter by syllabus area"
+                  value={areaFilter}
+                  onChange={(e) => setAreaFilter(e.target.value)}
+                  className="rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1.5 text-xs font-medium text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                >
+                  <option value="ALL">All Areas ({allQuestions.length})</option>
+                  <option value="Income Tax & NIC">Income Tax &amp; NIC</option>
+                  <option value="Chargeable Gains">Chargeable Gains</option>
+                  <option value="Inheritance Tax">Inheritance Tax</option>
+                  <option value="Corporation Tax">Corporation Tax</option>
+                  <option value="VAT">VAT</option>
+                  <option value="UK Tax System">UK Tax System</option>
+                  <option value="Specimen">Specimen CBE</option>
+                </select>
+
+                <select
+                  aria-label="Filter by status"
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(e.target.value as 'ALL' | 'unattempted' | 'missed')
+                  }
+                  className="rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1.5 text-xs font-medium text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="unattempted">Unattempted</option>
+                  <option value="missed">Missed ({missedIds.size})</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex-1 divide-y divide-[#EFECE4] overflow-y-auto dark:divide-[#262C36]">
+              {filteredList.length === 0 ? (
+                <div className="p-6 text-center text-xs text-neutral-500">
+                  No questions match those filters.{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSecFilter('ALL');
+                      setAreaFilter('ALL');
+                      setStatusFilter('ALL');
+                      setSearchQ('');
+                    }}
+                    className="font-semibold text-[#0F5132] hover:underline"
+                  >
+                    Reset
+                  </button>
+                </div>
+              ) : (
+                filteredList.map((item) => {
+                  const isActive = item.id === question.id;
+                  const isAttempted = attemptedIds.has(item.id);
+                  const isMissed = missedIds.has(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        onSelectQuestion(item);
+                        setQueueOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors ${
+                        isActive
+                          ? 'bg-emerald-50/70 dark:bg-emerald-950/30'
+                          : 'hover:bg-[#FAF9F6] dark:hover:bg-[#1C222B]'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 font-mono text-[11px]">
+                          <span className="font-bold text-[#0F5132] dark:text-emerald-400">
+                            {item.id}
+                          </span>
+                          <span className="text-neutral-400">·</span>
+                          <span className="text-neutral-500 dark:text-neutral-400">
+                            Sec {item.section} ({item.marks}m)
+                          </span>
+                        </div>
+                        <p className="truncate text-xs font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                          {item.title.replace(/^KIT\s+\w+\s*/, '')}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-mono text-[11px] font-semibold">
+                        {isMissed ? (
+                          <span className="text-red-700 dark:text-red-400">Review</span>
+                        ) : isAttempted ? (
+                          <span className="text-[#0F5132] dark:text-emerald-400">Done</span>
+                        ) : (
+                          <span className="text-neutral-400">New</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
+        </div>
+      )}
 
-          <select
-            aria-label="Filter by syllabus area"
-            value={areaFilter}
-            onChange={(e) => setAreaFilter(e.target.value)}
-            className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800"
+      {/* Clean Distraction-Free Studio Control Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E6E4DD] bg-white px-4 py-3 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setQueueOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-3 py-1.5 text-xs font-semibold text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6]"
           >
-            <option value="ALL">All Syllabus Areas ({allQuestions.length})</option>
-            <option value="Income Tax & NIC">Income Tax & NIC</option>
-            <option value="Chargeable Gains">Chargeable Gains</option>
-            <option value="Inheritance Tax">Inheritance Tax</option>
-            <option value="Corporation Tax">Corporation Tax</option>
-            <option value="VAT">VAT</option>
-            <option value="UK Tax System">UK Tax System & Ethics</option>
-            <option value="Specimen">Specimen CBE Exam</option>
-          </select>
-
-          <select
-            aria-label="Filter by status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'unattempted' | 'missed')}
-            className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="unattempted">Unattempted</option>
-            <option value="missed">Missed / SRS ({missedIds.size})</option>
-          </select>
+            <ListFilter className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" />
+            Browse Bank ({filteredList.length})
+          </button>
 
           <select
             aria-label="Select question from bank"
@@ -635,7 +722,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               const found = allQuestions.find((x) => x.id === e.target.value);
               if (found) onSelectQuestion(found);
             }}
-            className="max-w-xs rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800"
+            className="max-w-[230px] sm:max-w-[285px] rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1.5 text-xs font-semibold text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
           >
             {!filteredList.some((x) => x.id === question.id) && (
               <option value={question.id}>
@@ -644,37 +731,16 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
             )}
             {filteredList.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.id} ({item.marks}m Sec {item.section}) · {item.title.slice(0, 42)}
+                {item.id} ({item.marks}m Sec {item.section}) · {item.title.slice(0, 38)}
               </option>
             ))}
           </select>
 
-          <span className="font-mono text-[11px] font-semibold text-slate-500 tabular-nums">
-            {currentIdx >= 0 ? `${currentIdx + 1}/${filteredList.length}` : `${filteredList.length} shown`}
-          </span>
-
-          {filteredList.length === 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setSecFilter('ALL');
-                setAreaFilter('ALL');
-                setStatusFilter('ALL');
-                setSearchQ('');
-              }}
-              className="text-xs font-semibold text-blue-700 hover:underline"
-            >
-              Reset Filters
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             disabled={currentIdx <= 0}
             onClick={() => currentIdx > 0 && onSelectQuestion(filteredList[currentIdx - 1])}
-            className="inline-flex whitespace-nowrap shrink-0 items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             Prev
@@ -687,17 +753,74 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               currentIdx < filteredList.length - 1 &&
               onSelectQuestion(filteredList[currentIdx + 1])
             }
-            className="inline-flex whitespace-nowrap shrink-0 items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
           >
             Next
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 font-mono text-xs font-bold tabular-nums ${
+              secondsLeft < budgetSeconds * 0.2
+                ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200'
+                : 'border-[#E6E4DD] bg-[#FAF9F6] text-[#14171A] dark:border-[#262C36] dark:bg-[#12161D] dark:text-[#F0F3F6]'
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5 text-neutral-500" />
+            {formatClock(secondsLeft)}
+            <button
+              type="button"
+              aria-label="Pause or resume timer"
+              onClick={() => setTimerRunning((r) => !r)}
+              className="text-neutral-500 hover:text-[#14171A] dark:hover:text-white"
+            >
+              {timerRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            </button>
+            <button
+              type="button"
+              aria-label="Reset timer"
+              onClick={() => {
+                setSecondsLeft(budgetSeconds);
+                setTimerRunning(true);
+              }}
+              className="text-neutral-500 hover:text-[#14171A] dark:hover:text-white"
+            >
+              <RotateCcw className="h-3 w-3" />
+            </button>
+          </div>
+
           <button
             type="button"
-            onClick={() => onSelectQuestion(generateTrapVariant(question.topic_id, Math.floor(Math.random() * 3)))}
-            className="inline-flex whitespace-nowrap shrink-0 items-center gap-1 rounded-md border border-slate-300 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+            onClick={() => setCalcOpen((c) => !c)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+              calcOpen
+                ? 'border-[#0F5132] bg-emerald-50 text-[#0F5132] dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300'
+                : 'border-[#D8D4C8] bg-white text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200'
+            }`}
           >
-            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+            <Calculator className="h-3.5 w-3.5" />
+            Calculator
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTablesOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D4C8] bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Tables
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              onSelectQuestion(generateTrapVariant(question.topic_id, Math.floor(Math.random() * 3)))
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#14171A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
             Trap Variant
           </button>
         </div>
@@ -705,178 +828,80 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
 
       {/* Watchlist Banner */}
       {watchlistTraps.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-950">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200">
           <span>
             <strong>Personal Watchlist:</strong>{' '}
-            {watchlistTraps
-              .map((w) => `${w.trapCategory} (${w.hitCount} hits)`)
-              .join(' · ')}
+            {watchlistTraps.map((w) => `${w.trapCategory} (${w.hitCount} hits)`).join(' · ')}
           </span>
-          <span className="font-mono text-amber-800">Read dates & adjectives twice before clicking!</span>
+          <span className="font-mono">Read dates &amp; qualifiers twice before answering</span>
         </div>
       )}
 
-      {/* Active Question Header */}
-      <div className="rounded-lg border border-slate-200 bg-white p-5">
-        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-slate-600">
-              <span className="font-bold text-blue-700">{question.id}</span>
-              <span>·</span>
-              <span>Section {question.section}</span>
-              <span>·</span>
-              <span>{question.marks} marks</span>
-              <span>·</span>
-              <span>{question.kit_page}</span>
-              {question.past_exam && (
-                <>
-                  <span>·</span>
-                  <span>{question.past_exam}</span>
-                </>
-              )}
-            </div>
-            <h1 className="mt-1 font-display text-lg font-bold text-slate-900">
-              {question.title.replace(/\s*\|\s*$/, '')}
-            </h1>
-            <p className="text-xs text-slate-500">
-              Topic {question.topic_id}: {question.topic} ({question.st_chapter}) · {question.exam_frequency_tag}
-            </p>
+      {/* Interactive CBE Calculator Drawer */}
+      {calcOpen && (
+        <TaxCalculatorPad
+          expr={calcExpr}
+          onChangeExpr={setCalcExpr}
+          canApplyRounded={!locked && question.interaction === 'numeric_input'}
+          onApplyRounded={(rounded) => setAnswer(String(rounded))}
+          onClose={() => setCalcOpen(false)}
+        />
+      )}
+
+      {/* Active Question Stage */}
+      <div className="rounded-2xl border border-[#E6E4DD] bg-white p-5 sm:p-7 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className="border-b border-[#EFECE4] pb-4 dark:border-[#262C36]">
+          <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-neutral-500 dark:text-neutral-400">
+            <span className="font-bold text-[#0F5132] dark:text-emerald-400">{question.id}</span>
+            <span aria-hidden="true">·</span>
+            <span>Section {question.section}</span>
+            <span aria-hidden="true">·</span>
+            <span>{question.marks} marks</span>
+            <span aria-hidden="true">·</span>
+            <span>{question.kit_page}</span>
+            {question.past_exam && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{question.past_exam}</span>
+              </>
+            )}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* 1.8 min/mark Countdown Timer */}
-            <div
-              className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-sm font-bold tabular-nums ${
-                secondsLeft < budgetSeconds * 0.2
-                  ? 'border-amber-300 bg-amber-50 text-amber-900'
-                  : 'border-slate-200 bg-slate-50 text-slate-900'
-              }`}
-            >
-              <Clock className="h-4 w-4 text-slate-500" />
-              {formatClock(secondsLeft)}
-              <button
-                type="button"
-                aria-label="Pause or resume timer"
-                onClick={() => setTimerRunning((r) => !r)}
-                className="ml-1 text-slate-500 hover:text-slate-900"
-              >
-                {timerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-              </button>
-              <button
-                type="button"
-                aria-label="Reset timer"
-                onClick={() => {
-                  setSecondsLeft(budgetSeconds);
-                  setTimerRunning(true);
-                }}
-                className="text-slate-500 hover:text-slate-900"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setCalcOpen((c) => !c)}
-              className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold ${
-                calcOpen
-                  ? 'border-blue-600 bg-blue-50 text-blue-900'
-                  : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
-              }`}
-            >
-              <Calculator className="h-3.5 w-3.5 text-blue-700" />
-              Calculator
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setTablesOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              <BookOpen className="h-3.5 w-3.5 text-blue-700" />
-              Exam Tables
-            </button>
-          </div>
+          <h1 className="mt-1.5 font-display text-xl sm:text-2xl font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+            {question.title.replace(/\s*\|\s*$/, '')}
+          </h1>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            Topic {question.topic_id}: {question.topic} ({question.st_chapter}) ·{' '}
+            {question.exam_frequency_tag}
+          </p>
         </div>
 
-        {calcOpen && (
-          <div className="mt-3 flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 items-center gap-2">
-              <Calculator className="h-4 w-4 shrink-0 text-slate-500" />
-              <input
-                type="text"
-                aria-label="CBE arithmetic calculator expression"
-                value={calcExpr}
-                onChange={(e) => setCalcExpr(e.target.value)}
-                placeholder="e.g. 36000 * 36% * 11 / 12 or (240000 - 190000) * 19%"
-                className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 font-mono text-xs text-slate-900"
-              />
-            </div>
-            <div className="flex items-center gap-2.5 text-xs">
-              {calcExpr.trim() ? (
-                calcResult.ok ? (
-                  <>
-                    <span className="font-mono font-bold text-slate-900 tabular-nums">
-                      = {calcResult.value.toLocaleString()} (round £{calcResult.rounded.toLocaleString()})
-                    </span>
-                    {!locked && question.interaction === 'numeric_input' && (
-                      <button
-                        type="button"
-                        onClick={() => setAnswer(String(calcResult.rounded))}
-                        className="rounded border border-blue-600 bg-blue-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-blue-700"
-                      >
-                        Use £{calcResult.rounded.toLocaleString()}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <span className="font-mono text-red-700">{calcResult.error}</span>
-                )
-              ) : (
-                <span className="text-slate-500">Supports +, −, *, /, %, ( )</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Question Body: Split screen for Case / CR, Single clean flow for Sec A */}
+        {/* Split-Screen for Case/CR, Focused Column for Section A */}
         <div
-          className={`mt-5 ${
+          className={`mt-6 ${
             question.type === 'case' || question.type === 'cr'
               ? 'grid grid-cols-1 gap-6 lg:grid-cols-12'
               : 'space-y-5'
           }`}
         >
-          {/* Scenario & Requirement */}
           <div
             className={
               question.type === 'case' || question.type === 'cr'
-                ? 'lg:col-span-6 space-y-4'
+                ? 'lg:col-span-6 lg:sticky lg:top-20 lg:self-start space-y-4'
                 : 'space-y-4'
             }
           >
-            {question.scenario && (
-              <div className="rounded-md border border-slate-200 bg-slate-50/70 p-4">
-                <p className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Scenario
-                </p>
-                <div className="whitespace-pre-line text-sm leading-relaxed text-slate-800">
-                  {question.scenario}
-                </div>
-              </div>
-            )}
+            {question.scenario && <ScenarioText text={question.scenario} />}
 
-            <div className="rounded-md border border-blue-200 bg-blue-50/40 p-4">
-              <p className="mb-1 font-mono text-[11px] font-bold uppercase tracking-wider text-blue-800">
+            <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/40 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+              <p className="mb-1 font-mono text-[11px] font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
                 Requirement
               </p>
-              <div className="whitespace-pre-line text-sm font-medium text-slate-900">
+              <div className="whitespace-pre-line text-sm font-semibold text-[#14171A] dark:text-[#F0F3F6]">
                 {question.requirement}
               </div>
             </div>
           </div>
 
-          {/* Interactive Response Zone */}
           <div
             className={
               question.type === 'case' || question.type === 'cr'
@@ -886,7 +911,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
           >
             {question.type === 'case' ? (
               <div className="space-y-4">
-                <p className="text-xs font-semibold text-slate-600">
+                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
                   Section B Case: Complete all 5 Objective Tests below, then submit together.
                 </p>
                 {(question.options as CaseSubQuestion[]).map((sq, idx) => {
@@ -894,14 +919,12 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                   return (
                     <div
                       key={sq.sub_num}
-                      className="rounded-md border border-slate-200 bg-white p-4 space-y-2.5"
+                      className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]"
                     >
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="font-mono text-xs font-bold text-blue-700">
-                          OT {sq.sub_num} ({sq.marks} marks)
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-slate-900 whitespace-pre-line">
+                      <span className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
+                        OT {sq.sub_num} ({sq.marks} marks)
+                      </span>
+                      <p className="text-sm font-medium text-[#14171A] whitespace-pre-line dark:text-[#F0F3F6]">
                         {sq.prompt}
                       </p>
                       {renderSingleOrSubInput(
@@ -922,7 +945,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
             ) : question.type === 'cr' ? (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-800">
+                  <span className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
                     CBE Constructed Response Workspace (Marked)
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -937,14 +960,14 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                             : tpl
                         );
                       }}
-                      className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100"
+                      className="rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1 text-[11px] font-semibold text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
                     >
                       + Insert Proforma Template
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowScratchPad((v) => !v)}
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                      className="rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
                     >
                       {showScratchPad ? 'Hide Scratch Pad' : 'Scratch Pad (Unmarked)'}
                     </button>
@@ -957,42 +980,41 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                   value={typeof answer === 'string' ? answer : ''}
                   onChange={(e) => setAnswer(e.target.value)}
                   placeholder="Structure clearly with headings, separate lines, negatives in brackets (X), explicit 0 for exempt items, and labelled workings (W1), (W2)..."
-                  className="w-full rounded-md border border-slate-300 bg-white p-3 font-mono text-xs leading-relaxed text-slate-900 focus:border-blue-600 focus:outline-none disabled:bg-slate-50"
+                  className="w-full rounded-xl border border-[#D8D4C8] bg-[#FAF9F6] p-3.5 font-mono text-xs leading-relaxed text-[#14171A] focus:border-[#0F5132] focus:outline-none disabled:opacity-75 dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
                 />
 
-                {/* Live CBE Presentation Checker */}
                 {liveCbeCheck && (
                   <div
                     data-testid="cbe-presentation-checker"
-                    className="rounded-md border border-slate-200 bg-slate-50/80"
+                    className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#12161D]"
                   >
                     <button
                       type="button"
                       onClick={() => setCbeCheckerOpen((o) => !o)}
-                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left"
+                      className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left"
                     >
                       <div className="flex items-center gap-2">
                         {liveCbeCheck.markerRisks.length === 0 ? (
-                          <ShieldCheck className="h-4 w-4 text-teal-700" />
+                          <ShieldCheck className="h-4 w-4 text-[#0F5132] dark:text-emerald-400" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 text-amber-700" />
+                          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                         )}
-                        <span className="text-xs font-bold text-slate-900">
+                        <span className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
                           CBE Presentation Checker
                         </span>
                         <span
                           className={`font-mono text-xs font-bold tabular-nums ${
                             liveCbeCheck.scoreOutOf100 >= 80
-                              ? 'text-teal-700'
+                              ? 'text-[#0F5132] dark:text-emerald-400'
                               : liveCbeCheck.scoreOutOf100 >= 50
-                              ? 'text-amber-700'
-                              : 'text-red-700'
+                              ? 'text-amber-700 dark:text-amber-400'
+                              : 'text-red-700 dark:text-red-400'
                           }`}
                         >
                           {liveCbeCheck.scoreOutOf100}/100
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+                      <div className="flex items-center gap-2 text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
                         <span>
                           {liveCbeCheck.markerRisks.length === 0
                             ? 'All CBE layout checks passed'
@@ -1009,25 +1031,29 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                     </button>
 
                     {cbeCheckerOpen && (
-                      <div className="divide-y divide-slate-200/80 border-t border-slate-200 bg-white px-3.5 py-2 text-xs">
+                      <div className="divide-y divide-[#EFECE4] border-t border-[#E6E4DD] bg-white px-4 py-2 text-xs dark:divide-[#262C36] dark:border-[#262C36] dark:bg-[#161B22]">
                         {liveCbeCheck.findings.map((finding) => (
-                          <div key={finding.id} className="flex items-start gap-2.5 py-2">
+                          <div key={finding.id} className="flex items-start gap-2.5 py-2.5">
                             {finding.status === 'pass' ? (
-                              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-700" />
+                              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0F5132] dark:text-emerald-400" />
                             ) : (
-                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" />
+                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                             )}
                             <div className="min-w-0">
                               <p
                                 className={`font-semibold ${
-                                  finding.status === 'pass' ? 'text-teal-900' : 'text-amber-950'
+                                  finding.status === 'pass'
+                                    ? 'text-[#0F5132] dark:text-emerald-300'
+                                    : 'text-amber-900 dark:text-amber-200'
                                 }`}
                               >
                                 {finding.label}
                               </p>
-                              <p className="text-slate-600 leading-relaxed">{finding.detail}</p>
+                              <p className="text-neutral-600 leading-relaxed dark:text-neutral-400">
+                                {finding.detail}
+                              </p>
                               {finding.fixExample && (
-                                <p className="mt-0.5 font-mono text-[11px] text-blue-800">
+                                <p className="mt-0.5 font-mono text-[11px] text-[#1E3A5F] dark:text-sky-300">
                                   Fix: {finding.fixExample}
                                 </p>
                               )}
@@ -1040,8 +1066,8 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 )}
 
                 {showScratchPad && (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-1.5">
-                    <p className="text-[11px] font-bold text-amber-900">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-1.5 dark:border-amber-900/60 dark:bg-amber-950/20">
+                    <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
                       Unmarked CBE Scratch Pad (ACCA markers CANNOT see this box!)
                     </p>
                     <textarea
@@ -1049,7 +1075,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                       value={scratchPad}
                       onChange={(e) => setScratchPad(e.target.value)}
                       placeholder="Rough jottings only — copy workings into the main response box above for marks."
-                      className="w-full rounded border border-amber-200 bg-white p-2 font-mono text-xs text-slate-800"
+                      className="w-full rounded-lg border border-amber-200 bg-white p-2.5 font-mono text-xs text-[#14171A] dark:border-amber-800 dark:bg-[#0D1117] dark:text-[#F0F3F6]"
                     />
                   </div>
                 )}
@@ -1064,39 +1090,46 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               )
             )}
 
-            {/* Pre-Submit Hint & Submit Actions */}
             {!locked && (
               <div className="space-y-3 pt-2">
                 {showHint && (
-                  <div className="rounded-md border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs text-blue-950">
+                  <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/60 px-4 py-3 text-xs text-[#14171A] dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100">
                     <strong>Hint (no spoilers):</strong>{' '}
                     {question.examiner_debrief.examiner_playbook}
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSubmit(false)}
-                    className="rounded-md bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800"
-                  >
-                    Submit Answer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowHint((h) => !h)}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    <HelpCircle className="h-3.5 w-3.5" />
-                    {showHint ? 'Hide Hint' : 'Show Hint'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSubmit(true)}
-                    className="rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    Skip & Reveal
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSubmit(false)}
+                      className="rounded-lg bg-[#0F5132] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                    >
+                      Submit Answer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowHint((h) => !h)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D4C8] bg-white px-3.5 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+                    >
+                      <HelpCircle className="h-3.5 w-3.5" />
+                      {showHint ? 'Hide Hint' : 'Hint (H)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSubmit(true)}
+                      className="rounded-lg border border-[#D8D4C8] bg-white px-3.5 py-2.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-300"
+                    >
+                      Skip &amp; Reveal
+                    </button>
+                  </div>
+
+                  {question.type === 'mcq' && (
+                    <span className="hidden font-mono text-[11px] text-neutral-400 sm:inline">
+                      Keys: A–D select · C calc · T tables
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -1107,75 +1140,75 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
       {/* PHASE 3: Locked Solution + Mark Scheme + Examiner Debrief (A–F) */}
       {locked && graded && (
         <section className="space-y-5">
-          {/* 2nd-offence Trap Micro-Drill Trigger */}
           {microDrillAlert && (
-            <div className="flex flex-col gap-3 rounded-lg border border-red-300 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-2xl border border-red-300 bg-red-50/90 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-red-900 dark:bg-red-950/30">
               <div className="flex items-start gap-2.5">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-700" />
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-700 dark:text-red-400" />
                 <div>
-                  <p className="text-sm font-bold text-red-950">
+                  <p className="text-sm font-bold text-red-950 dark:text-red-200">
                     2nd Repeat Trap Detected: {microDrillAlert}
                   </p>
-                  <p className="text-xs text-red-900">
-                    You have hit the "{microDrillAlert}" trap twice. Launch a focused 2-question micro-drill now to lock out this error.
+                  <p className="text-xs text-red-900 dark:text-red-300">
+                    You hit &ldquo;{microDrillAlert}&rdquo; twice. Launch a focused 2-question micro-drill now.
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => onLaunchMicroDrill(microDrillAlert)}
-                className="shrink-0 rounded-md bg-red-700 px-4 py-2 text-xs font-semibold text-white hover:bg-red-800"
+                className="shrink-0 rounded-lg bg-red-700 px-4 py-2 text-xs font-semibold text-white hover:bg-red-800"
               >
                 Start 2-Q Micro-Drill →
               </button>
             </div>
           )}
 
-          {/* Verdict + Answer Comparison */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2.5">
+          {/* Verdict & Mark Scheme */}
+          <div className="rounded-2xl border border-[#E6E4DD] bg-white p-6 space-y-5 dark:border-[#262C36] dark:bg-[#161B22]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EFECE4] pb-4 dark:border-[#262C36]">
+              <div className="flex items-center gap-3">
                 {graded.isAutoGraded ? (
                   graded.isFullyCorrect ? (
-                    <CheckCircle2 className="h-5 w-5 text-teal-700" />
+                    <CheckCircle2 className="h-5 w-5 text-[#0F5132] dark:text-emerald-400" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-red-700" />
+                    <XCircle className="h-5 w-5 text-red-700 dark:text-red-400" />
                   )
                 ) : (
-                  <CheckCircle2 className="h-5 w-5 text-blue-700" />
+                  <CheckCircle2 className="h-5 w-5 text-[#0F5132] dark:text-emerald-400" />
                 )}
                 <div>
-                  <h2 className="font-display text-base font-bold text-slate-900">
+                  <h2 className="font-display text-lg font-semibold text-[#14171A] dark:text-[#F0F3F6]">
                     {graded.isAutoGraded
                       ? graded.isFullyCorrect
                         ? 'Full Marks Earned'
                         : graded.marksScored > 0
                         ? 'Partial Marks Earned'
-                        : 'Incorrect — Review Full Solution & Trap Debrief'
+                        : 'Incorrect — Review Worked Solution & Trap Debrief'
                       : 'Self-Mark Against Official ACCA Mark Scheme'}
                   </h2>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">
                     Your response: <span className="font-mono font-semibold">{graded.userDisplay}</span> · Correct:{' '}
-                    <span className="font-mono font-semibold text-teal-800">{graded.correctDisplay}</span>
+                    <span className="font-mono font-semibold text-[#0F5132] dark:text-emerald-400">
+                      {graded.correctDisplay}
+                    </span>
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3.5 py-2 font-mono text-sm font-bold text-slate-900 tabular-nums">
+              <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-4 py-2 font-mono text-sm font-bold text-[#14171A] tabular-nums dark:border-[#262C36] dark:bg-[#12161D] dark:text-[#F0F3F6]">
                 {graded.isAutoGraded ? graded.marksScored : selfMarkedScore} / {question.marks} marks
               </div>
             </div>
 
-            {/* Section B Sub-Question Breakdown */}
             {graded.subResults && (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-5">
                 {graded.subResults.map((sr) => (
                   <div
                     key={sr.subNum}
-                    className={`rounded border p-2.5 text-xs ${
+                    className={`rounded-xl border p-3 text-xs ${
                       sr.correct
-                        ? 'border-teal-200 bg-teal-50 text-teal-950'
-                        : 'border-red-200 bg-red-50 text-red-950'
+                        ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100'
+                        : 'border-red-200 bg-red-50/70 text-red-950 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100'
                     }`}
                   >
                     <p className="font-mono font-bold">
@@ -1188,22 +1221,21 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               </div>
             )}
 
-            {/* Interactive Self-Marking Step Checklist */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Step-by-Step ACCA Mark Scheme Checkboxes
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
+                  Step-by-Step ACCA Mark Scheme
                 </h3>
                 {question.type === 'cr' && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       disabled={crScoreConfirmed}
                       onClick={handleApplySelfMarkToProgress}
-                      className={`rounded border px-3 py-1 text-xs font-semibold ${
+                      className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white ${
                         crScoreConfirmed
-                          ? 'border-teal-600 bg-teal-600 text-white'
-                          : 'border-blue-700 bg-blue-700 text-white hover:bg-blue-800'
+                          ? 'bg-emerald-700'
+                          : 'bg-[#0F5132] hover:bg-[#0B3D26] dark:bg-emerald-600'
                       }`}
                     >
                       {crScoreConfirmed
@@ -1214,7 +1246,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                       type="button"
                       disabled={aiLoading}
                       onClick={handleRequestAiFeedback}
-                      className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                      className="rounded-lg border border-[#D8D4C8] bg-white px-3 py-1.5 text-xs font-semibold text-[#14171A] hover:bg-neutral-50 disabled:opacity-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6]"
                     >
                       {aiLoading ? 'Reviewing...' : 'AI Examiner Critique'}
                     </button>
@@ -1222,15 +1254,15 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 )}
               </div>
 
-              <div className="divide-y divide-slate-100 rounded-md border border-slate-200">
+              <div className="divide-y divide-[#EFECE4] rounded-xl border border-[#E6E4DD] dark:divide-[#262C36] dark:border-[#262C36]">
                 {question.mark_scheme_steps.map((step) => {
                   const isChecked = Boolean(checkedSteps[step.id]);
                   return (
                     <label
                       key={step.id}
-                      className="flex cursor-pointer items-center justify-between gap-3 px-3.5 py-2.5 text-xs hover:bg-slate-50"
+                      className="flex cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-xs hover:bg-[#FAF9F6] dark:hover:bg-[#1C222B]"
                     >
-                      <span className="flex items-center gap-2.5 text-slate-800">
+                      <span className="flex items-center gap-2.5 text-[#14171A] dark:text-[#F0F3F6]">
                         <input
                           type="checkbox"
                           checked={isChecked}
@@ -1240,11 +1272,11 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                               [step.id]: !prev[step.id],
                             }))
                           }
-                          className="h-4 w-4 rounded border-slate-300 text-blue-700"
+                          className="h-4 w-4 rounded border-neutral-300 text-[#0F5132]"
                         />
                         {step.label}
                       </span>
-                      <span className="font-mono font-bold text-slate-700 tabular-nums">
+                      <span className="font-mono font-bold text-[#0F5132] dark:text-emerald-400 tabular-nums">
                         {step.marks}m
                       </span>
                     </label>
@@ -1253,38 +1285,55 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               </div>
 
               {aiCritique && (
-                <div className="rounded-md border border-blue-200 bg-blue-50 p-3.5 text-xs text-slate-800 whitespace-pre-line">
-                  <strong className="text-blue-900">Examiner Critique:</strong>
+                <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/50 p-4 text-xs text-[#14171A] whitespace-pre-line dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-neutral-200">
+                  <strong className="text-[#0F5132] dark:text-emerald-400">Examiner Critique:</strong>
                   {'\n'}
                   {aiCritique}
                 </div>
               )}
             </div>
 
-            {/* Easy-Marks Audit & CBE Presentation Coach (for CRs) */}
             {crAudit && crPresentation && (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="rounded-md border border-slate-200 bg-slate-50 p-3.5">
-                  <h4 className="text-xs font-bold text-slate-900">
+                <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 dark:border-[#262C36] dark:bg-[#12161D]">
+                  <h4 className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
                     Easy-Marks Audit ({crAudit.capturedCount}/{crAudit.totalChecks} captured)
                   </h4>
                   <ul className="mt-2 space-y-1.5 text-xs">
                     {crAudit.checks.map((c, idx) => (
-                      <li key={idx} className={c.captured ? 'text-teal-800' : 'text-red-800'}>
+                      <li
+                        key={idx}
+                        className={
+                          c.captured
+                            ? 'text-[#0F5132] dark:text-emerald-400'
+                            : 'text-red-700 dark:text-red-400'
+                        }
+                      >
                         {c.captured ? '✓' : '✗'} {c.label}
-                        {!c.captured && <span className="block text-slate-500 ml-3.5">{c.tip}</span>}
+                        {!c.captured && (
+                          <span className="ml-3.5 block text-neutral-500 dark:text-neutral-400">
+                            {c.tip}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="rounded-md border border-slate-200 bg-slate-50 p-3.5">
-                  <h4 className="text-xs font-bold text-slate-900">
+                <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 dark:border-[#262C36] dark:bg-[#12161D]">
+                  <h4 className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
                     CBE Presentation Audit ({crPresentation.scoreOutOf100}/100)
                   </h4>
                   <ul className="mt-2 space-y-1.5 text-xs">
                     {crPresentation.findings.map((f) => (
-                      <li key={f.id} className={f.status === 'pass' ? 'text-teal-800' : 'text-amber-900'}>
+                      <li
+                        key={f.id}
+                        className={
+                          f.status === 'pass'
+                            ? 'text-[#0F5132] dark:text-emerald-400'
+                            : 'text-amber-800 dark:text-amber-300'
+                        }
+                      >
                         {f.status === 'pass' ? '✓' : '!'} <strong>{f.label}:</strong> {f.detail}
                       </li>
                     ))}
@@ -1293,65 +1342,74 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               </div>
             )}
 
-            {/* Complete Kaplan Model Solution */}
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-4 space-y-2">
+            <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-2 dark:border-[#262C36] dark:bg-[#12161D]">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#14171A] dark:text-[#F0F3F6]">
                   Full Worked Solution (Kit {question.answer_page})
                 </h3>
-                <span className="font-mono text-xs text-slate-500">
+                <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
                   {question.kit_page} · {question.st_chapter}
                 </span>
               </div>
-              <div className="whitespace-pre-line font-mono text-xs leading-relaxed text-slate-800">
+              <div className="whitespace-pre-line font-mono text-xs leading-relaxed text-[#14171A] dark:text-neutral-200">
                 {question.full_worked_solution}
               </div>
             </div>
           </div>
 
-          {/* EXAMINER INTELLIGENCE LAYER: A–F Examiner Debrief */}
-          <div className="rounded-lg border border-slate-300 bg-white p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
-              <h2 className="font-display text-base font-bold text-slate-900">
-                Examiner Debrief — Trap Category: {question.examiner_debrief.trap_category}
+          {/* A–F Examiner Forensic Debrief */}
+          <div className="rounded-2xl border border-[#E6E4DD] bg-white p-6 space-y-4 dark:border-[#262C36] dark:bg-[#161B22]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFECE4] pb-3 dark:border-[#262C36]">
+              <h2 className="font-display text-lg font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                Examiner Debrief — {question.examiner_debrief.trap_category}
               </h2>
-              <span className="font-mono text-xs text-slate-500">
+              <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
                 {question.exam_frequency_tag}
               </span>
             </div>
 
             <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 text-xs leading-relaxed">
-              <div className="rounded-md border border-red-200 bg-red-50/40 p-3.5">
-                <p className="font-bold text-red-900">A. Trap of the Question</p>
-                <p className="mt-1 text-slate-800">{question.examiner_debrief.trap_of_question}</p>
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                <p className="font-bold text-amber-950 dark:text-amber-200">A. Trap of the Question</p>
+                <p className="mt-1 text-neutral-800 dark:text-neutral-200">
+                  {question.examiner_debrief.trap_of_question}
+                </p>
               </div>
 
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3.5">
-                <p className="font-bold text-slate-900">B. Distractor Forensics</p>
-                <p className="mt-1 text-slate-800">{question.examiner_debrief.distractor_forensics}</p>
+              <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 dark:border-[#262C36] dark:bg-[#12161D]">
+                <p className="font-bold text-[#14171A] dark:text-[#F0F3F6]">B. Distractor Forensics</p>
+                <p className="mt-1 text-neutral-700 dark:text-neutral-300">
+                  {question.examiner_debrief.distractor_forensics}
+                </p>
               </div>
 
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3.5">
-                <p className="font-bold text-slate-900">C. Examiner’s Playbook</p>
-                <p className="mt-1 text-slate-800">{question.examiner_debrief.examiner_playbook}</p>
+              <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 dark:border-[#262C36] dark:bg-[#12161D]">
+                <p className="font-bold text-[#14171A] dark:text-[#F0F3F6]">C. Examiner’s Playbook</p>
+                <p className="mt-1 text-neutral-700 dark:text-neutral-300">
+                  {question.examiner_debrief.examiner_playbook}
+                </p>
               </div>
 
-              <div className="rounded-md border border-teal-200 bg-teal-50/40 p-3.5">
-                <p className="font-bold text-teal-900">D. Speed Trick</p>
-                <p className="mt-1 text-slate-800">{question.examiner_debrief.speed_trick}</p>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                <p className="font-bold text-[#0F5132] dark:text-emerald-300">D. Speed Trick</p>
+                <p className="mt-1 text-neutral-800 dark:text-neutral-200">
+                  {question.examiner_debrief.speed_trick}
+                </p>
               </div>
 
-              <div className="rounded-md border border-blue-200 bg-blue-50/40 p-3.5">
-                <p className="font-bold text-blue-900">E. Twist Prediction</p>
-                <p className="mt-1 text-slate-800">{question.examiner_debrief.twist_prediction}</p>
+              <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 dark:border-[#262C36] dark:bg-[#12161D]">
+                <p className="font-bold text-[#1E3A5F] dark:text-sky-300">E. Twist Prediction</p>
+                <p className="mt-1 text-neutral-700 dark:text-neutral-300">
+                  {question.examiner_debrief.twist_prediction}
+                </p>
               </div>
 
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3.5">
-                <p className="font-bold text-slate-900">F. Personal Trap Ledger Update</p>
+              <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 dark:border-[#262C36] dark:bg-[#12161D]">
+                <p className="font-bold text-[#14171A] dark:text-[#F0F3F6]">F. Personal Trap Ledger Update</p>
                 {(() => {
                   const entry = appState.trapLedger[question.examiner_debrief.trap_category];
                   return (
-                    <p className="mt-1 text-slate-800">
+                    <p className="mt-1 text-neutral-700 dark:text-neutral-300">
                       Hits: <strong className="font-mono">{entry?.hitCount ?? 0}</strong> · Avoided:{' '}
                       <strong className="font-mono">{entry?.avoidedCount ?? 0}</strong> · Status:{' '}
                       {entry?.microDrillRequired ? 'Micro-drill flagged (≥2 hits)' : 'Monitored'}
@@ -1371,7 +1429,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                     onSelectQuestion(filteredList[0]);
                   }
                 }}
-                className="inline-flex items-center gap-1.5 rounded-md bg-blue-700 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-800"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F5132] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
               >
                 Next Question
                 <ArrowRight className="h-3.5 w-3.5" />
