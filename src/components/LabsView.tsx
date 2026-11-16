@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  Bot,
   Brain,
   CheckCircle2,
   Eye,
@@ -16,6 +17,7 @@ import {
 } from '../data/taxReference';
 import { addDaysIso, getDueMistakes } from '../engine/mastery';
 import type { AppState, KitQuestion } from '../types/tx';
+import { MistakeBatchDiagnosisPanel, MistakeTutorInlinePanel } from './MistakeAiCoach';
 import { TrapLedgerDashboard } from './TrapLedgerDashboard';
 
 export type LabSubTab = 'srs' | 'traps' | 'confuse' | 'memory';
@@ -31,6 +33,7 @@ interface LabsViewProps {
 
 export const LabsView: React.FC<LabsViewProps> = ({
   appState,
+  allQuestions,
   initialSubTab = 'srs',
   onRedrillQuestion,
   onRateMemoryCard,
@@ -42,8 +45,9 @@ export const LabsView: React.FC<LabsViewProps> = ({
     setSubTab(initialSubTab);
   }, [initialSubTab]);
 
-  // Mistake Bank filter
+  // Mistake Bank filter & inline Gemini Tutor row
   const [srsFilter, setSrsFilter] = useState<'all' | 'due'>('all');
+  const [activeTutorMistakeId, setActiveTutorMistakeId] = useState<string | null>(null);
 
   // Confusion Clinic interactive state
   const [activePairId, setActivePairId] = useState(CONFUSION_CLINIC_PAIRS[0].id);
@@ -120,7 +124,7 @@ export const LabsView: React.FC<LabsViewProps> = ({
         </div>
       </div>
 
-      {/* 1. MISTAKE BANK & 1/3/7d SRS */}
+      {/* 1. MISTAKE BANK & 1/3/7d SRS + GEMINI AI COACH */}
       {subTab === 'srs' && (
         <div className="space-y-4">
           {appState.mistakes.length === 0 ? (
@@ -130,12 +134,18 @@ export const LabsView: React.FC<LabsViewProps> = ({
                 Mistake Bank is Clean
               </h2>
               <p className="mx-auto mt-1 max-w-md text-xs text-neutral-600 dark:text-neutral-400">
-                Any missed or skipped Kit question logs here automatically on a 1 → 3 → 7 day spaced-repetition schedule.
+                Any missed or skipped Kit question logs here automatically on a 1 → 3 → 7 day spaced-repetition schedule, ready for Gemini pattern diagnosis and step-by-step tutoring.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              <MistakeBatchDiagnosisPanel
+                mistakes={visibleMistakes.length > 0 ? visibleMistakes : appState.mistakes}
+                trapLedger={appState.trapLedger}
+                onOpenQuestionById={onRedrillQuestion}
+              />
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="inline-flex rounded-lg border border-[#E6E4DD] bg-white p-1 dark:border-[#262C36] dark:bg-[#161B22]">
                   <button
                     type="button"
@@ -160,75 +170,122 @@ export const LabsView: React.FC<LabsViewProps> = ({
                     Due Now ({dueMistakes.length})
                   </button>
                 </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Click <strong className="text-[#14171A] dark:text-neutral-200">AI Tutor</strong> on any row for Gemini Socratic breakdown &amp; fresh check questions.
+                </p>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]">
-                <table className="min-w-full divide-y divide-[#EFECE4] text-left text-xs dark:divide-[#262C36]">
-                  <thead>
-                    <tr className="bg-[#FAF9F6] font-semibold text-neutral-600 dark:bg-[#12161D] dark:text-neutral-400">
-                      <th className="px-4 py-3">Question</th>
-                      <th className="px-4 py-3">Rule Missed &amp; Trap</th>
-                      <th className="px-4 py-3">Your Answer vs Correct</th>
-                      <th className="px-4 py-3">SRS Stage &amp; Due Date</th>
-                      <th className="px-4 py-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
+              {visibleMistakes.length === 0 ? (
+                <div className="rounded-2xl border border-[#E6E4DD] bg-white p-6 text-center text-xs text-neutral-600 dark:border-[#262C36] dark:bg-[#161B22] dark:text-neutral-400">
+                  No spaced-repetition items due right now. Switch to{' '}
+                  <button
+                    type="button"
+                    onClick={() => setSrsFilter('all')}
+                    className="font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+                  >
+                    All Logged ({appState.mistakes.length})
+                  </button>{' '}
+                  to inspect or ask Gemini about past mistakes.
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]">
+                  <div className="hidden lg:grid lg:grid-cols-12 gap-3 border-b border-[#EFECE4] bg-[#FAF9F6] px-4 py-3 text-xs font-semibold text-neutral-600 dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-400">
+                    <div className="lg:col-span-2">Question</div>
+                    <div className="lg:col-span-3">Rule Missed &amp; Trap</div>
+                    <div className="lg:col-span-3">Your Answer vs Correct</div>
+                    <div className="lg:col-span-2">SRS Stage &amp; Due Date</div>
+                    <div className="lg:col-span-2 text-right">Actions</div>
+                  </div>
+
+                  <div className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
                     {visibleMistakes.map((m) => {
                       const isDue = new Date(m.nextReviewIso).getTime() <= Date.now();
+                      const tutorOpen = activeTutorMistakeId === m.id;
+                      const matchedQuestion = allQuestions.find((q) => q.id === m.questionId);
                       return (
-                        <tr key={m.id} className="hover:bg-[#FAF9F6] dark:hover:bg-[#1C222B]">
-                          <td className="px-4 py-3.5">
-                            <span className="font-mono font-bold text-[#0F5132] dark:text-emerald-400">
-                              {m.questionId}
-                            </span>
-                            <p className="text-neutral-700 dark:text-neutral-300">{m.topicName}</p>
-                            <p className="font-mono text-[11px] text-neutral-400">
-                              {m.kitCitation}
-                            </p>
-                          </td>
-                          <td className="max-w-xs px-4 py-3.5 text-[#14171A] dark:text-[#F0F3F6]">
-                            {m.ruleMissed}
-                          </td>
-                          <td className="px-4 py-3.5 font-mono">
-                            <p className="text-red-700 dark:text-red-400">
-                              Yours: {m.userAnswerSummary}
-                            </p>
-                            <p className="text-[#0F5132] dark:text-emerald-400">
-                              Ans: {m.correctAnswerSummary}
-                            </p>
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <span
-                              className={`text-xs font-semibold ${
-                                isDue
-                                  ? 'text-amber-700 dark:text-amber-400'
-                                  : 'text-neutral-700 dark:text-neutral-300'
-                              }`}
-                            >
-                              {isDue ? 'Due Now · ' : ''}
-                              {srsLabel(m.srsStage)}
-                            </span>
-                            <p className="mt-1 font-mono text-[11px] text-neutral-500">
-                              {m.nextReviewIso.slice(0, 10)}
-                            </p>
-                          </td>
-                          <td className="px-4 py-3.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => onRedrillQuestion(m.questionId)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-[#0F5132] px-3 py-1.5 font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
-                            >
-                              Re-Drill
-                              <ArrowRight className="h-3 w-3" />
-                            </button>
-                          </td>
-                        </tr>
+                        <div key={m.id}>
+                          <div className="grid grid-cols-1 gap-3 px-4 py-4 text-xs hover:bg-[#FAF9F6] lg:grid-cols-12 lg:items-center dark:hover:bg-[#1C222B]">
+                            <div className="lg:col-span-2">
+                              <span className="font-mono font-bold text-[#0F5132] dark:text-emerald-400">
+                                {m.questionId}
+                              </span>
+                              <p className="font-medium text-neutral-800 dark:text-neutral-200">
+                                {m.topicName}
+                              </p>
+                              <p className="font-mono text-[11px] text-neutral-400">
+                                {m.kitCitation}
+                              </p>
+                            </div>
+
+                            <div className="lg:col-span-3 leading-relaxed text-[#14171A] dark:text-[#F0F3F6]">
+                              {m.ruleMissed}
+                            </div>
+
+                            <div className="lg:col-span-3 font-mono space-y-0.5">
+                              <p className="text-red-700 dark:text-red-400">
+                                Yours: {m.userAnswerSummary}
+                              </p>
+                              <p className="text-[#0F5132] dark:text-emerald-400">
+                                Ans: {m.correctAnswerSummary}
+                              </p>
+                            </div>
+
+                            <div className="lg:col-span-2">
+                              <span
+                                className={`text-xs font-semibold ${
+                                  isDue
+                                    ? 'text-amber-700 dark:text-amber-400'
+                                    : 'text-neutral-700 dark:text-neutral-300'
+                                }`}
+                              >
+                                {isDue ? 'Due Now · ' : ''}
+                                {srsLabel(m.srsStage)}
+                              </span>
+                              <p className="mt-0.5 font-mono text-[11px] text-neutral-500">
+                                {m.nextReviewIso.slice(0, 10)}
+                              </p>
+                            </div>
+
+                            <div className="lg:col-span-2 flex flex-wrap items-center gap-2 lg:justify-end">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveTutorMistakeId(tutorOpen ? null : m.id)
+                                }
+                                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 font-semibold transition-colors ${
+                                  tutorOpen
+                                    ? 'border-[#0F5132] bg-[#FAF9F6] text-[#0F5132] dark:border-emerald-500 dark:bg-[#1C222B] dark:text-emerald-300'
+                                    : 'border-[#D8D4C8] bg-white text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#161B22] dark:text-neutral-200'
+                                }`}
+                              >
+                                <Bot className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" />
+                                {tutorOpen ? 'Hide Tutor' : 'AI Tutor'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onRedrillQuestion(m.questionId)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-[#0F5132] px-3 py-1.5 font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
+                              >
+                                Re-Drill
+                                <ArrowRight className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {tutorOpen && (
+                            <MistakeTutorInlinePanel
+                              mistake={m}
+                              question={matchedQuestion}
+                              onClose={() => setActiveTutorMistakeId(null)}
+                              onRedrillQuestion={onRedrillQuestion}
+                            />
+                          )}
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

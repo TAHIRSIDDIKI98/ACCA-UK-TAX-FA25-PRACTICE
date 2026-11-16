@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 const PORT = Number(process.env.PORT || 3000);
 const KIT_PDF_PATH = path.resolve(
@@ -25,6 +25,32 @@ const studyTextMemory: StudyTextState = {
   uploadedAt: null,
   sampleHeadings: [],
 };
+
+function getGeminiClient(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+  });
+}
+
+function formatGeminiError(err: unknown): { status: number; message: string } {
+  const msg = err instanceof Error ? err.message : 'Gemini request failed';
+  if (/403|PERMISSION_DENIED|API_KEY_INVALID/i.test(msg)) {
+    return {
+      status: 403,
+      message: 'Gemini API key permission denied or invalid. Check Settings > Secrets.',
+    };
+  }
+  if (/429|RESOURCE_EXHAUSTED/i.test(msg)) {
+    return {
+      status: 429,
+      message: 'Gemini quota limit reached right now. Please wait a moment and retry.',
+    };
+  }
+  return { status: 500, message: msg };
+}
 
 async function startServer() {
   const app = express();
@@ -219,6 +245,289 @@ Provide concise, exam-serious bullet feedback (max 150 words):
         source: 'deterministic',
         feedback: `AI critique unavailable (${err instanceof Error ? err.message : 'network error'}). Please mark line-by-line using the ACCA Step Mark Scheme below.`,
       });
+    }
+  });
+
+  // 1. Gemini Mistake Bank Pattern Diagnosis (batch root-cause analysis)
+  app.post('/api/coach/mistake-diagnosis', async (req, res) => {
+    const { recentMistakes, topTraps } = req.body as {
+      recentMistakes?: Array<{
+        questionId: string;
+        topicName: string;
+        ruleMissed: string;
+        userAnswerSummary: string;
+        correctAnswerSummary: string;
+        kitCitation: string;
+        srsStage: number;
+      }>;
+      topTraps?: Array<{
+        trapCategory: string;
+        hitCount: number;
+        avoidedCount: number;
+        ruleSummary: string;
+        questionIds: string[];
+      }>;
+    };
+
+    if (!Array.isArray(recentMistakes) || recentMistakes.length === 0) {
+      res.status(400).json({ ok: false, error: 'Log at least one missed question first to run AI pattern diagnosis.' });
+      return;
+    }
+
+    const ai = getGeminiClient();
+    if (!ai) {
+      res.status(503).json({
+        ok: false,
+        configured: false,
+        error: 'Gemini server key is not active in this runtime. Showing offline rule diagnosis instead.',
+      });
+      return;
+    }
+
+    try {
+      const prompt = `You are an expert ACCA TX-UK (Finance Act 2025 / Tax Year 2025/26) Revision Coach diagnosing a student's Mistake Bank ahead of the 8 December 2026 sitting.
+
+Logged Mistakes (recent ${recentMistakes.length}):
+${JSON.stringify(recentMistakes, null, 2)}
+
+Repeat Trap Ledger Hits:
+${JSON.stringify(topTraps ?? [], null, 2)}
+
+Identify the student's recurring conceptual errors, give exact Finance Act 2025 (£ and date) rule fixes, order the top 3-5 question IDs to re-drill first, and state one sharp exam-day guardrail.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-4-hydrogen',
+        contents: prompt,
+        config: {
+          systemInstruction:
+            'Be concise, quantitative, and strictly accurate to Finance Act 2025 (2025/26 UK tax rules: PA £12,570, CGT AEA £3,000, IHT NRB £325k, VAT reg £90k, Class 1 Ee 8%/2%, Er 15% >£5k, CT 19%/25% with £50k/£250k thresholds). Never invent statutes.',
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            required: ['headline', 'rootCauses', 'priorityOrder', 'examDayRule'],
+            properties: {
+              headline: { type: Type.STRING },
+              rootCauses: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  required: ['title', 'ruleFix', 'questionIds'],
+                  properties: {
+                    title: { type: Type.STRING },
+                    ruleFix: { type: Type.STRING },
+                    questionIds: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  },
+                },
+              },
+              priorityOrder: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              examDayRule: { type: Type.STRING },
+            },
+          },
+        },
+      });
+
+      const parsed = JSON.parse((response.text ?? '{}').trim()) as {
+        headline?: string;
+        rootCauses?: Array<{ title?: string; ruleFix?: string; questionIds?: string[] }>;
+        priorityOrder?: string[];
+        examDayRule?: string;
+      };
+
+      const normalizedCauses = Array.isArray(parsed.rootCauses)
+        ? parsed.rootCauses.slice(0, 4).map((rc, idx) => ({
+            title: String(rc?.title || `Pattern ${idx + 1}`),
+            ruleFix: String(rc?.ruleFix || 'Review the Finance Act 2025 proforma steps for this question.'),
+            questionIds: Array.isArray(rc?.questionIds) ? rc.questionIds.map(String) : [],
+          }))
+        : [];
+
+      res.json({
+        ok: true,
+        diagnosis: {
+          source: 'gemini',
+          headline: parsed.headline || 'Mistake Bank pattern diagnosis complete.',
+          rootCauses: normalizedCauses,
+          priorityOrder: Array.isArray(parsed.priorityOrder) ? parsed.priorityOrder.slice(0, 5).map(String) : [],
+          examDayRule: parsed.examDayRule || 'Verify dates, gross/net qualifiers, and FA25 thresholds before locking any answer.',
+        },
+      });
+    } catch (err) {
+      const formatted = formatGeminiError(err);
+      res.status(formatted.status).json({ ok: false, configured: true, error: formatted.message });
+    }
+  });
+
+  // 2. Gemini Per-Mistake Interactive Socratic Tutor
+  app.post('/api/coach/mistake-tutor', async (req, res) => {
+    const { mistake, questionContext, messages } = req.body as {
+      mistake?: {
+        questionId: string;
+        topicName: string;
+        ruleMissed: string;
+        userAnswerSummary: string;
+        correctAnswerSummary: string;
+        kitCitation: string;
+      };
+      questionContext?: {
+        scenario?: string;
+        requirement?: string;
+        fullWorkedSolution?: string;
+        trapOfQuestion?: string;
+        speedTrick?: string;
+      };
+      messages?: Array<{ role: 'user' | 'assistant'; text: string }>;
+    };
+
+    if (!mistake || !mistake.questionId) {
+      res.status(400).json({ ok: false, error: 'Missing mistake entry context.' });
+      return;
+    }
+
+    const ai = getGeminiClient();
+    if (!ai) {
+      res.status(503).json({
+        ok: false,
+        configured: false,
+        error: 'Gemini server key is not configured in this environment.',
+      });
+      return;
+    }
+
+    try {
+      const systemInstruction = `You are a patient, crystal-clear ACCA TX-UK (Finance Act 2025, tax year 2025/26) Revision Clinic tutor helping a student fix a specific mistake from their Mistake Bank.
+
+Question: ${mistake.questionId} (${mistake.topicName}, ${mistake.kitCitation})
+Scenario: ${(questionContext?.scenario ?? '').slice(0, 1800)}
+Requirement: ${(questionContext?.requirement ?? '').slice(0, 500)}
+Student's Wrong Answer: ${mistake.userAnswerSummary}
+Official Correct Answer: ${mistake.correctAnswerSummary}
+Rule / Trap Summary: ${mistake.ruleMissed}
+Official Worked Solution: ${(questionContext?.fullWorkedSolution ?? '').slice(0, 2200)}
+${questionContext?.speedTrick ? `Examiner Speed Trick: ${questionContext.speedTrick}` : ''}
+
+Keep answers concise (under 180 words), show exact £ workings cleanly line by line, explicitly pinpoint why the student's answer differed, and end with a quick mental check so they don't repeat the trap.`;
+
+      const historyText =
+        Array.isArray(messages) && messages.length > 0
+          ? messages
+              .slice(-8)
+              .map((m) => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`)
+              .join('\n\n')
+          : 'Student: Break down step-by-step why my answer differed from the correct Finance Act 2025 answer, and tell me the fastest way to check this rule in the exam.';
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-4-hydrogen',
+        contents: historyText,
+        config: { systemInstruction },
+      });
+
+      res.json({
+        ok: true,
+        reply: (response.text ?? 'Unable to generate explanation right now.').trim(),
+      });
+    } catch (err) {
+      const formatted = formatGeminiError(err);
+      res.status(formatted.status).json({ ok: false, configured: true, error: formatted.message });
+    }
+  });
+
+  // 3. Gemini Adaptive Re-Check Practice Drill for a Specific Missed Rule
+  app.post('/api/coach/mistake-drill', async (req, res) => {
+    const { mistake, questionContext } = req.body as {
+      mistake?: {
+        questionId: string;
+        topicName: string;
+        ruleMissed: string;
+        correctAnswerSummary: string;
+      };
+      questionContext?: {
+        scenario?: string;
+        requirement?: string;
+        fullWorkedSolution?: string;
+      };
+    };
+
+    if (!mistake || !mistake.questionId) {
+      res.status(400).json({ ok: false, error: 'Missing mistake entry context.' });
+      return;
+    }
+
+    const ai = getGeminiClient();
+    if (!ai) {
+      res.status(503).json({
+        ok: false,
+        configured: false,
+        error: 'Gemini server key is not configured in this environment.',
+      });
+      return;
+    }
+
+    try {
+      const prompt = `Create ONE brand-new ACCA TX-UK (Finance Act 2025, Tax Year 2025/26) Section A 2-mark multiple-choice verification question testing the EXACT same rule the student missed on ${mistake.questionId} (${mistake.topicName}), using DIFFERENT realistic UK figures/dates so they cannot rely on memorising the old answer.
+
+Rule Missed: ${mistake.ruleMissed}
+Original Scenario Reference: ${(questionContext?.scenario ?? '').slice(0, 1000)}
+Original Worked Solution Reference: ${(questionContext?.fullWorkedSolution ?? '').slice(0, 1200)}
+
+Double-check all arithmetic so the correct option matches the exact Finance Act 2025 calculation and all three distractors represent realistic ACCA mistakes.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-4-hydrogen',
+        contents: prompt,
+        config: {
+          systemInstruction:
+            'You are an ACCA TX-UK Finance Act 2025 question writer. Always verify arithmetic carefully under 2025/26 rates before assigning correctKey.',
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            required: ['stem', 'requirement', 'options', 'correctKey', 'explanation'],
+            properties: {
+              stem: { type: Type.STRING },
+              requirement: { type: Type.STRING },
+              options: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  required: ['key', 'text'],
+                  properties: {
+                    key: { type: Type.STRING },
+                    text: { type: Type.STRING },
+                  },
+                },
+              },
+              correctKey: { type: Type.STRING },
+              explanation: { type: Type.STRING },
+            },
+          },
+        },
+      });
+
+      const rawText = (response.text ?? '').trim();
+      const parsed = JSON.parse(rawText) as {
+        stem?: string;
+        requirement?: string;
+        options?: Array<{ key: string; text: string }>;
+        correctKey?: string;
+        explanation?: string;
+      };
+
+      res.json({
+        ok: true,
+        drill: {
+          source: 'gemini',
+          stem: parsed.stem ?? '',
+          requirement: parsed.requirement ?? '',
+          options: Array.isArray(parsed.options) ? parsed.options.slice(0, 4) : [],
+          correctKey: String(parsed.correctKey ?? 'A').toUpperCase(),
+          explanation: parsed.explanation ?? '',
+        },
+      });
+    } catch (err) {
+      const formatted = formatGeminiError(err);
+      res.status(formatted.status).json({ ok: false, configured: true, error: formatted.message });
     }
   });
 

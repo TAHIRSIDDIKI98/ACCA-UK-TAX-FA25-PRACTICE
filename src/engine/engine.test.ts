@@ -25,6 +25,11 @@ import {
   recordAttemptAndUpdateState,
   serializeStateForExport,
 } from './mastery';
+import {
+  buildDeterministicMistakeDiagnosis,
+  buildMistakeDiagnosisPayload,
+  parseAndValidateDrillResponse,
+} from './mistakeCoach';
 import { TOPICS, CONFUSION_CLINIC_PAIRS } from '../data/taxReference';
 import type { CaseSubQuestion, KitQuestion, MatrixOptions, McqOption, PairDropdownGroup } from '../types/tx';
 
@@ -436,6 +441,81 @@ test('computeTaxHeadSummaries covers all 24 topics and getRecommendedNextAction 
   assert.equal(afterTwoHits.kind, 'micro_drill');
 });
 
+test('Mistake Bank AI Coach helpers build payloads, offline FA25 diagnoses, and validate drill JSON', () => {
+  const emptyReport = buildDeterministicMistakeDiagnosis([], {});
+  assert.equal(emptyReport.source, 'deterministic');
+  assert.equal(emptyReport.rootCauses.length, 0);
 
+  let state = createInitialAppState('2026-12-08');
+  const q27 = questions.find((q) => q.id === 'Q27')!;
+  const q28 = questions.find((q) => q.id === 'Q28')!;
+  state = recordAttemptAndUpdateState(state, {
+    question: q27,
+    tier: 2,
+    marksScored: 0,
+    marksAvailable: 2,
+    freeMarksCaptured: 0,
+    freeMarksTotal: 0,
+    userAnswerSummary: 'A',
+    correctAnswerSummary: String(q27.correct_answer),
+    elapsedSeconds: 80,
+    nowIso: '2026-05-10T10:00:00.000Z',
+  }).nextState;
+  state = recordAttemptAndUpdateState(state, {
+    question: q28,
+    tier: 2,
+    marksScored: 0,
+    marksAvailable: 2,
+    freeMarksCaptured: 0,
+    freeMarksTotal: 0,
+    userAnswerSummary: 'B',
+    correctAnswerSummary: String(q28.correct_answer),
+    elapsedSeconds: 85,
+    nowIso: '2026-05-10T10:05:00.000Z',
+  }).nextState;
 
+  const payload = buildMistakeDiagnosisPayload(state.mistakes, state.trapLedger);
+  assert.equal(payload.recentMistakes.length, 2);
+  assert.ok(payload.topTraps.length >= 1);
 
+  const report = buildDeterministicMistakeDiagnosis(state.mistakes, state.trapLedger);
+  assert.equal(report.source, 'deterministic');
+  assert.ok(report.rootCauses.length >= 1);
+  assert.ok(report.priorityOrder.length >= 1);
+  assert.ok(report.examDayRule.length > 10);
+
+  const fencedJson = [
+    '```json',
+    JSON.stringify({
+      stem: 'A taxpayer has a petrol company car with list price £25,000 and CO2 emissions of 112 g/km for 2025/26.',
+      requirement: 'Calculate the taxable car benefit.',
+      options: [
+        { key: 'A', text: '£6,500' },
+        { key: 'B', text: '£6,750' },
+        { key: 'C', text: '£7,000' },
+        { key: 'D', text: '£7,250' },
+      ],
+      correctKey: 'b',
+      explanation: '112 rounds down to 110 -> 17% + ((110-55)/5) = 27%; 27% x £25,000 = £6,750.',
+    }),
+    '```',
+  ].join('\n');
+
+  const parsedDrill = parseAndValidateDrillResponse(fencedJson);
+  assert.equal(parsedDrill.source, 'gemini');
+  assert.equal(parsedDrill.correctKey, 'B');
+  assert.equal(parsedDrill.options.length, 4);
+
+  assert.throws(
+    () =>
+      parseAndValidateDrillResponse(
+        JSON.stringify({
+          stem: 'Missing option test',
+          requirement: 'Pick one',
+          options: [{ key: 'A', text: '£100' }],
+          correctKey: 'Z',
+        })
+      ),
+    /Invalid drill structure|Invalid correctKey/
+  );
+});
