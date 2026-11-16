@@ -1,0 +1,6 @@
+{
+  "name": "TX Mastercoach — ACCA TX-UK (FA25)",
+  "description": "Adaptive ACCA Taxation (TX-UK, Finance Act 2025) revision, question player, examiner debrief, mistake bank, spaced repetition, and CBE mock exam platform grounded in Kaplan TX-UK FA25.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

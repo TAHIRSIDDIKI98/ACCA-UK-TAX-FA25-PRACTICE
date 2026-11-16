@@ -1,0 +1,1632 @@
+[
+  {
+    "id": "SPEC-Q1",
+    "q_num": 1,
+    "title": "Specimen Q1",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "William is self-employed, and his tax adjusted trading profit for the year ended 5 April 2026\nwas £82,700. During the tax year 2025/26, William contributed £5,400 (gross) into a personal\npension scheme.",
+    "requirement": "What amount of class 4 national insurance contributions (NIC) will William pay for the tax year 2025/26?",
+    "options": [
+      {
+        "key": "A",
+        "text": "£4,208"
+      },
+      {
+        "key": "B",
+        "text": "£2,911"
+      },
+      {
+        "key": "C",
+        "text": "£2,803"
+      },
+      {
+        "key": "D",
+        "text": "£3,884"
+      }
+    ],
+    "correct_answer": "B",
+    "full_worked_solution": "B\nClass 4  |  £\n£37,700 (£50,270 – £12,570) × 6%  |  2,262\n£32,430 (£82,700 – £50,270) × 2%  |  649\n––––––\n2,911\n––––––",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-1-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.610",
+    "answer_page": "p.623",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "National Insurance",
+      "trap_of_question": "National Insurance: Class 4 | £ £37,700 (£50,270 – £12,570) × 6% | 2,262",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
+      "speed_trick": "Class 1/1A/4 never deduct pension contributions; benefits go on Class 1A (15%) due 22 July 2026, not Class 1.",
+      "twist_prediction": "Next sitting they could add Employment Allowance (£10,500 per employer) or a director paid unevenly across months."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q2",
+    "q_num": 2,
+    "title": "Specimen Q2",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "multi",
+    "interaction": "multi_select",
+    "marks": 2,
+    "scenario": "You are a trainee Chartered Certified Accountant and your firm has a client who has refused\nto disclose a chargeable gain to HM Revenue & Customs (HMRC).\nFrom an ethical viewpoint, which TWO of the following actions could be expected of your\nfirm?",
+    "requirement": "Select TWO options.",
+    "options": [
+      {
+        "key": "1",
+        "text": "Reporting under the money laundering regulations"
+      },
+      {
+        "key": "2",
+        "text": "Advising the client to make disclosure"
+      },
+      {
+        "key": "3",
+        "text": "Informing HMRC of the non-disclosure"
+      },
+      {
+        "key": "4",
+        "text": "Warning the client that your firm will be reporting the non-disclosure"
+      }
+    ],
+    "correct_answer": [
+      "1",
+      "2"
+    ],
+    "full_worked_solution": "1 and 2",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-2-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.610",
+    "answer_page": "p.623",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: 1 and 2",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q3",
+    "q_num": 3,
+    "title": "Specimen Q3",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "number",
+    "interaction": "numeric_input",
+    "marks": 2,
+    "scenario": "Martin is self-employed, and for the year ended 5 April 2026 his trading profit was £111,100.\nDuring the tax year 2025/26, Martin made a gift aid donation of £800 (gross) to a national\ncharity.",
+    "requirement": "What amount of personal allowance will Martin be entitled to for the tax year 2025/26?",
+    "options": [],
+    "correct_answer": "7420",
+    "full_worked_solution": "£7,420\n£\nPersonal allowance  |  12,570\nRestriction (£111,100 – £800 – £100,000 = £10,300/2)  |  (5,150)\n––––––\nRestricted personal allowance  |  7,420\n––––––",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-3-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.610",
+    "answer_page": "p.623",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "PA Taper & ANI",
+      "trap_of_question": "PA Taper & ANI: £ Personal allowance | 12,570",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
+      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
+      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q4",
+    "q_num": 4,
+    "title": "Specimen Q4",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "For the year ended 31 March 2026, Halo Ltd made a trading loss of £180,000.\nHalo Ltd has owned 100% of the ordinary share capital of Shallow Ltd since it began trading\non 1 July 2025. For the year ended 30 June 2026, Shallow Ltd will make a trading profit of\n£224,000.\nNeither company has any other taxable profits or allowable losses.",
+    "requirement": "What is the maximum amount of group relief which Shallow Ltd can claim from Halo Ltd in respect of the trading loss of £180,000 for the year ended 31 March 2026?",
+    "options": [
+      {
+        "key": "A",
+        "text": "£180,000"
+      },
+      {
+        "key": "B",
+        "text": "£168,000"
+      },
+      {
+        "key": "C",
+        "text": "£45,000"
+      },
+      {
+        "key": "D",
+        "text": "£135,000"
+      }
+    ],
+    "correct_answer": "D",
+    "full_worked_solution": "D\nMaximum loss relief = Lower of:  |  £\n(£180,000 × 9/12)  |  135,000\n(£224,000 × 9/12)  |  168,000\nMaximum loss relief  |  135,000\n–––––––\nTutorial note\nWhere companies do not have coterminous (matching) year ends, the available profits and\nlosses must be time apportioned, to find the relevant amounts falling within the\ncorresponding accounting period.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-4-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.611",
+    "answer_page": "p.623",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Trading Losses",
+      "trap_of_question": "Trading Losses: Maximum loss relief = Lower of: | £ (£180,000 × 9/12) | 135,000",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Where companies do not have coterminous (matching) year ends, the available profits and losses must be time apportioned, to find the relevant amounts falling within the corresponding accounting period.",
+      "speed_trick": "Check the claim deadline (31 Jan 2028 vs 5 Apr 2030) and whether early-years (3 yrs FIFO) or normal s.64 (current/prior year) applies.",
+      "twist_prediction": "Next sitting they could trigger the £50,000 / 25% cap on income tax reliefs against non-trading income."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q5",
+    "q_num": 5,
+    "title": "Specimen Q5",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "For the year ended 31 March 2025, Sizeable Ltd had taxable total profits of £820,000, and for\nthe year ended 31 March 2026 had taxable total profits of £970,000. The profits accrue\nevenly throughout the year.\nSizeable Ltd has had one associated company for many years.",
+    "requirement": "How will Sizeable Ltd pay its corporation tax liability for the year ended 31 March 2026?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Nine instalments of £20,500 and a balancing payment of £58,000"
+      },
+      {
+        "key": "B",
+        "text": "Four instalments of £60,625"
+      },
+      {
+        "key": "C",
+        "text": "Four instalments of £51,250 and a balancing payment of £37,500"
+      },
+      {
+        "key": "D",
+        "text": "One payment of £242,500"
+      }
+    ],
+    "correct_answer": "B",
+    "full_worked_solution": "B\n(£970,000 × 25%)/4 = £60,625\nTutorial note\nThe profit threshold is shared between associated companies, in this case two. Sizeable Ltd\nexceeded the threshold of £750,000 (£1,500,000/2) in the current and the previous period.\nAs this is not the first period that Sizeable Ltd is a large company, the corporation tax must\nbe settled by paying quarterly instalments. The instalments are based on the estimated\ncorporation tax liability for the current accounting period.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-5-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.611",
+    "answer_page": "p.624",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: (£970,000 × 25%)/4 = £60,625 The profit threshold is shared between associated companies, in this case two. Sizeable Ltd",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "The profit threshold is shared between associated companies, in this case two. Sizeable Ltd exceeded the threshold of £750,000 (£1,500,000/2) in the current and the previous period. As this is not the first period that Sizeable Ltd is a large company, the corp",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q6",
+    "q_num": 6,
+    "title": "Specimen Q6",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "which it did not pay until 31 March 2027. Lateness Ltd is not a large company.",
+    "requirement": "How much interest will Lateness Ltd be charged by HM Revenue & Customs (HMRC) in respect of the late payment of its corporation tax liability for the year ended 31 December 2025?",
+    "options": [
+      {
+        "key": "A",
+        "text": "£2,550"
+      },
+      {
+        "key": "B",
+        "text": "£5,100"
+      },
+      {
+        "key": "C",
+        "text": "£850"
+      },
+      {
+        "key": "D",
+        "text": "£1,275"
+      }
+    ],
+    "correct_answer": "A",
+    "full_worked_solution": "A\n£60,000 × 8.5% × 6/12 = £2,550 (period 1 October 2026 to 31 March 2027)\nTutorial note\nAs Lateness Ltd is not a large company, the corporation tax would have been due 9 months\nand 1 day after the end of the accounting period (1 October 2026).",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-6-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.611",
+    "answer_page": "p.624",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: £60,000 × 8.5% × 6/12 = £2,550 (period 1 October 2026 to 31 March 2027) As Lateness Ltd is not a large company, the corporation tax would have been due 9 months",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "As Lateness Ltd is not a large company, the corporation tax would have been due 9 months and 1 day after the end of the accounting period (1 October 2026).",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q7",
+    "q_num": 7,
+    "title": "Specimen Q7",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "On 26 November 2025, Alice sold an antique table for £8,700. The antique table had been\npurchased on 16 May 2021 for £3,800.",
+    "requirement": "What is Alice’s chargeable gain in respect of the disposal of the antique table?",
+    "options": [
+      {
+        "key": "A",
+        "text": "£4,500"
+      },
+      {
+        "key": "B",
+        "text": "£1,620"
+      },
+      {
+        "key": "C",
+        "text": "£4,900"
+      },
+      {
+        "key": "D",
+        "text": "£0"
+      }
+    ],
+    "correct_answer": "A",
+    "full_worked_solution": "A\n£2,700 (£8,700 – £6,000) × 5/3 = £4,500\nThis is less than £4,900 (£8,700 – £3,800).\nTutorial note\nThe chattels rules apply to the disposal of the antique table. The gross proceeds are ˃£6,000\nand the cost is ≤£6,000 therefore the treatment is as follows:\nThe gain is calculated as normal i.e. Proceeds – cost\nThe gain must not exceed the maximum amount of 5/3 × (gross proceeds – £6,000)",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-7-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.611",
+    "answer_page": "p.624",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: £2,700 (£8,700 – £6,000) × 5/3 = £4,500 This is less than £4,900 (£8,700 – £3,800).",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "The chattels rules apply to the disposal of the antique table. The gross proceeds are ˃£6,000 and the cost is ≤£6,000 therefore the treatment is as follows: The gain is calculated as normal i.e. Proceeds – cost The gain must not exceed the maximum amount of 5/",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q8",
+    "q_num": 8,
+    "title": "Specimen Q8",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "number",
+    "interaction": "numeric_input",
+    "marks": 2,
+    "scenario": "On 14 November 2025, Jane made a cash gift to a trust of £800,000 (after deducting all\navailable exemptions). Jane paid the inheritance tax arising from this gift. Jane has not made\nany other lifetime gifts.\nWhat amount of lifetime inheritance tax would have been payable in respect of Jane’s gift",
+    "requirement": "to the trust?",
+    "options": [],
+    "correct_answer": "118750",
+    "full_worked_solution": "£118,750\n£\nChargeable amount  |  800,000\nNil rate band available at the date of the gift  |  (325,000)\n–––––––\nTaxable amount  |  475,000\n–––––––\nIHT payable at 25%  |  118,750\n–––––––",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-8-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.612",
+    "answer_page": "p.625",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: £ Chargeable amount | 800,000",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q9",
+    "q_num": 9,
+    "title": "Specimen Q9",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "multi",
+    "interaction": "matrix",
+    "marks": 2,
+    "scenario": "During the tax year 2025/26, Mildred made four cash gifts to her grandchildren:",
+    "requirement": "Select whether each gift is Exempt or Not exempt.",
+    "options": {
+      "columns": [
+        "EXEMPT",
+        "NOT EXEMPT"
+      ],
+      "rows": [
+        "For each of the gifts listed below, select whether the gift will be exempt or not from",
+        "inheritance tax under the small gifts exemption.",
+        "£400 to Alfred",
+        "£140 to Minnie",
+        "A further £280 to Minnie",
+        "£175 to Winifred"
+      ]
+    },
+    "correct_answer": {
+      "0": [
+        "NOT EXEMPT"
+      ],
+      "1": [
+        "NOT EXEMPT"
+      ],
+      "2": [
+        "NOT EXEMPT"
+      ],
+      "3": [
+        "EXEMPT"
+      ]
+    },
+    "full_worked_solution": "£175 to Winifred is exempt\nOther gifts are not exempt\nTutorial note\nWhen determining whether the small gifts exemption applies; the total gifts to each recipient\nduring the tax year must be considered. If the total value of gifts to one individual exceeds\n£250, the small gifts exemption cannot be applied to any of the gifts.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-9-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.612",
+    "answer_page": "p.625",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: £175 to Winifred is exempt Other gifts are not exempt",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "When determining whether the small gifts exemption applies; the total gifts to each recipient during the tax year must be considered. If the total value of gifts to one individual exceeds £250, the small gifts exemption cannot be applied to any of the gifts.",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q10",
+    "q_num": 10,
+    "title": "Specimen Q10",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "For the quarter ended 31 March 2026, Zim had standard-rated sales of £49,750 and standard-\nrated expenses of £22,750. Both figures are exclusive of value added tax (VAT).\nZim uses the flat rate scheme to calculate the amount of VAT payable, with the relevant\nscheme percentage for her trade being 12%. The percentage reduction for the first year of\nVAT registration is not available.",
+    "requirement": "How much VAT will Zim have to pay to HM Revenue & Customs (HMRC) for the quarter ended 31 March 2026?",
+    "options": [
+      {
+        "key": "A",
+        "text": "£5,970"
+      },
+      {
+        "key": "B",
+        "text": "£3,240"
+      },
+      {
+        "key": "C",
+        "text": "£5,400"
+      },
+      {
+        "key": "D",
+        "text": "£7,164"
+      }
+    ],
+    "correct_answer": "D",
+    "full_worked_solution": "D\n£49,750 × 120/100 at 12% = £7,164\nTutorial note\nThe flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-10-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.612",
+    "answer_page": "p.625",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: £49,750 × 120/100 at 12% = £7,164 The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q11",
+    "q_num": 11,
+    "title": "Specimen Q11",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "multi",
+    "interaction": "multi_select",
+    "marks": 2,
+    "scenario": "Which TWO of the following assets will ALWAYS be exempt from capital gains tax?",
+    "requirement": "Select TWO options.",
+    "options": [
+      {
+        "key": "1",
+        "text": "A car suitable for private use"
+      },
+      {
+        "key": "2",
+        "text": "A chattel"
+      },
+      {
+        "key": "3",
+        "text": "A UK Government security (gilt)"
+      },
+      {
+        "key": "4",
+        "text": "A house"
+      }
+    ],
+    "correct_answer": [
+      "1",
+      "3"
+    ],
+    "full_worked_solution": "1 and 3",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-11-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.612",
+    "answer_page": "p.625",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: 1 and 3",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q12",
+    "q_num": 12,
+    "title": "Specimen Q12",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "Winston has already invested £8,000 into a cash individual savings account (ISA) during the\ntax year 2025/26. He now wants to invest into a stocks and shares ISA.",
+    "requirement": "What is the maximum possible amount which Winston can invest into a stocks and shares ISA for the tax year 2025/26?",
+    "options": [
+      {
+        "key": "A",
+        "text": "£20,000"
+      },
+      {
+        "key": "B",
+        "text": "£12,000"
+      },
+      {
+        "key": "C",
+        "text": "£0"
+      },
+      {
+        "key": "D",
+        "text": "£8,000"
+      }
+    ],
+    "correct_answer": "B",
+    "full_worked_solution": "B\n£20,000 – £8,000 = £12,000\nTutorial note\nThe overall ISA investment limit for the tax year 2025/26 is £20,000.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-12-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.613",
+    "answer_page": "p.625",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Savings & Dividend Bands",
+      "trap_of_question": "Savings & Dividend Bands: £20,000 – £8,000 = £12,000 The overall ISA investment limit for the tax year 2025/26 is £20,000.",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "The overall ISA investment limit for the tax year 2025/26 is £20,000.",
+      "speed_trick": "Order income strictly Non-savings -> Savings -> Dividends; remember the £500 dividend / £1,000 savings NRBs consume basic rate band.",
+      "twist_prediction": "Next sitting they could push taxable income just over £37,700 or £125,140 so NRBs reduce to £500 or £0."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q13",
+    "q_num": 13,
+    "title": "Specimen Q13",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "multi",
+    "interaction": "matrix",
+    "marks": 2,
+    "scenario": "Ming is self-employed.\nFor each of the types of records listed below, select the date until which Ming must retain\nthe records used in preparing her self-assessment tax return for the tax year 2025/26?",
+    "requirement": "Select the date until which Ming must retain each type of record.",
+    "options": {
+      "columns": [
+        "31 January 2028",
+        "31 January 2032"
+      ],
+      "rows": [
+        "Business records",
+        "Non-business records"
+      ]
+    },
+    "correct_answer": {
+      "0": [
+        "31 January 2032"
+      ],
+      "1": [
+        "31 January 2032"
+      ]
+    },
+    "full_worked_solution": "31 January 2032 and 31 January 2032\nTutorial note\nTaxpayers with a business must retain all of their records (not just business records), until\n5 years from the 31 January filing date.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-13-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.613",
+    "answer_page": "p.626",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Specimen Exam",
+      "trap_of_question": "Specimen Exam: 31 January 2032 and 31 January 2032 Taxpayers with a business must retain all of their records (not just business records), until",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Taxpayers with a business must retain all of their records (not just business records), until 5 years from the 31 January filing date.",
+      "speed_trick": "Extract all dates and status adjectives first, then run a single clean vertical working.",
+      "twist_prediction": "Next sitting they could flip a date (part-year apportionment) or change an asset/income exemption status."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q14",
+    "q_num": 14,
+    "title": "Specimen Q14",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "Moon Ltd has had the following results:\nPeriod  |  Profit/(loss)\n£\nYear ended 31 December 2025  |  (105,000)\nFour-month period ended 31 December 2024  |  43,000\nYear ended 31 August 2024  |  96,000\nThe company does not have any other income.",
+    "requirement": "How much of Moon Ltd’s trading loss for the year ended 31 December 2025 can be relieved against its total profits of £96,000 for the year ended 31 August 2024?",
+    "options": [
+      {
+        "key": "A",
+        "text": "£64,000"
+      },
+      {
+        "key": "B",
+        "text": "£96,000"
+      },
+      {
+        "key": "C",
+        "text": "£70,000"
+      },
+      {
+        "key": "D",
+        "text": "£62,000"
+      }
+    ],
+    "correct_answer": "D",
+    "full_worked_solution": "D\nThe maximum loss relief is the lower of:\n•  |  Remaining loss: £62,000 (£105,000 – £43,000)\n•  |  Profits for 8 months ended 31 August 2024: £64,000 (£96,000 × 8/12)",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-14-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.613",
+    "answer_page": "p.626",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Trading Losses",
+      "trap_of_question": "Trading Losses: The maximum loss relief is the lower of: • | Remaining loss: £62,000 (£105,000 – £43,000)",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
+      "speed_trick": "Check the claim deadline (31 Jan 2028 vs 5 Apr 2030) and whether early-years (3 yrs FIFO) or normal s.64 (current/prior year) applies.",
+      "twist_prediction": "Next sitting they could trigger the £50,000 / 25% cap on income tax reliefs against non-trading income."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-Q15",
+    "q_num": 15,
+    "title": "Specimen Q15",
+    "topic": "Cross-Syllabus Specimen Exam",
+    "topic_id": 2,
+    "st_chapter": "FA25 Specimen",
+    "section": "A",
+    "type": "mcq",
+    "interaction": "single_mcq",
+    "marks": 2,
+    "scenario": "Nigel has not previously been resident in the UK, being in the UK for less than 20 days each\ntax year. For the tax year 2025/26, he has three ties with the UK.",
+    "requirement": "What is the maximum number of days which Nigel could spend in the UK during the tax year 2025/26 without being treated as resident in the UK for that year?",
+    "options": [
+      {
+        "key": "A",
+        "text": "90 days"
+      },
+      {
+        "key": "B",
+        "text": "182 days"
+      },
+      {
+        "key": "C",
+        "text": "45 days"
+      },
+      {
+        "key": "D",
+        "text": "120 days"
+      }
+    ],
+    "correct_answer": "A",
+    "full_worked_solution": "A\nTutorial note\nThe table regarding residency status is given in the tax rates and allowances provided to you\nin the examination, so you simply needed to refer to this table to find the answer.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-15-1",
+        "label": "Correct FA25 Specimen OT answer",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.613",
+    "answer_page": "p.626",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "UK Residence",
+      "trap_of_question": "UK Residence: The table regarding residency status is given in the tax rates and allowances provided to you in the examination, so you simply needed to refer to this table to find the answer.",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "The table regarding residency status is given in the tax rates and allowances provided to you in the examination, so you simply needed to refer to this table to find the answer.",
+      "speed_trick": "Always test Automatic Non-UK -> Automatic UK -> Sufficient Ties strictly in order; never jump straight to ties.",
+      "twist_prediction": "Next sitting they could flip whether the taxpayer was UK resident in any of the previous 3 tax years (leaver vs arriver ties)."
+    },
+    "free_marks_items": []
+  },
+  {
+    "id": "SPEC-CASE-1",
+    "q_num": 16,
+    "title": "Specimen Case 1 · Delroy, Grant, Marlon & Alvita (CGT)",
+    "topic": "CGT Specimen Case",
+    "topic_id": 17,
+    "st_chapter": "ch17-20",
+    "section": "B",
+    "type": "case",
+    "interaction": "case_5ot",
+    "marks": 10,
+    "scenario": "This exam section is worth 30 marks in total.\n1  |  Calculations and workings need only be made to the nearest £.\n2  |  All apportionments should be made to the nearest month.\nDelroy and Grant\nOn 10 January 2026, Delroy made a gift of 25,000 £1 ordinary shares in Dub Ltd, an unquoted\ntrading company, to his son, Grant. The market value of the shares on that date was £240,000.\nDelroy had subscribed for the 25,000 shares in Dub Ltd at par on 1 July 2015. Delroy and Grant have\nelected to hold over the gain as a gift of a business asset.\nGrant sold the 25,000 shares in Dub Ltd on 18 March 2026 for £240,000.\nDub Ltd has a share capital of 100,000 £1 ordinary shares. Delroy was the sales director of the\ncompany from its incorporation on 1 July 2015 until 10 January 2026. Grant has never been an\nemployee or a director of Dub Ltd.\nFor the tax year 2025/26, Delroy and Grant are both higher rate taxpayers. They have each made\nother disposals of assets during the tax year 2025/26, and therefore they have both already utilised\ntheir annual exempt amount for this year.\nMarlon and Alvita\nOn 28 March 2026, Marlon sold a house for £497,000, which he had owned individually. The house\nhad been purchased on 22 October 2010 for £152,600.\nThroughout the period of ownership, the house was occupied by Marlon and his wife, Alvita, as\ntheir main residence. One-third of the house was always used exclusively for business purposes by\nthe couple. Business asset disposal relief is not available in respect of this disposal.\nFor the tax year 2025/26, Marlon is a higher rate taxpayer, but Alvita did not have any taxable\nincome. This will remain the case for the tax year 2026/27. Neither of them has made any other\ndisposals of assets during the year.",
+    "requirement": "Answer all 5 linked Objective Test questions (Q16–Q20, 2 marks each = 10 marks).",
+    "options": [
+      {
+        "sub_num": 1,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What is Grant’s capital gains tax (CGT) liability for the tax year 2025/26 in respect of the disposal of the shares in Dub Ltd?",
+        "options": [
+          {
+            "key": "A",
+            "text": "£51,600"
+          },
+          {
+            "key": "B",
+            "text": "£50,880"
+          },
+          {
+            "key": "C",
+            "text": "£30,100"
+          },
+          {
+            "key": "D",
+            "text": "£29,680"
+          }
+        ],
+        "correct_answer": "A",
+        "worked_solution": "A\nCapital gains tax liability – 2025/26\n£\nProceeds  |  240,000\nLess: Cost (W)  |  (25,000)\n–––––––\nGain  |  215,000\nLess: AEA (already utilised)  |  (0)\n–––––––\nTaxable gain  |  215,000\n–––––––\nCapital gains tax (£215,000 × 24%)  |  51,600\n–––––––\nWorking:  |  £\nDeemed cost (MV at gift)  |  240,000\nLess: Gain held over (£240,000 – £25,000)  |  (215,000)\n–––––––\nCost  |  25,000\n–––––––\nTutorial note\nDelroy would have been able to claim business asset disposal relief (BADR) on disposal of the\nshares, as he was an employee and held at least 5% of the shares for at least 2 years prior to\ndisposal. However, Grant is not eligible for BADR, as he was not an employee of the company."
+      },
+      {
+        "sub_num": 2,
+        "marks": 2,
+        "type": "multi",
+        "interaction": "multi_select",
+        "prompt": "Which TWO of the following statements would have been true in relation to the CGT\nimplications if Delroy had instead sold the 25,000 shares in Dub Ltd himself for £240,000\non 10 January 2026, and then gifted the cash proceeds to Grant?\nSelect TWO options.",
+        "options": [
+          {
+            "key": "1",
+            "text": "Business asset disposal relief would have been available"
+          },
+          {
+            "key": "2",
+            "text": "The CGT liability would have been paid later"
+          },
+          {
+            "key": "3",
+            "text": "The cash gift would not have been a chargeable disposal"
+          },
+          {
+            "key": "4",
+            "text": "The cash gift would have qualified for gift holdover relief"
+          }
+        ],
+        "correct_answer": [
+          "1",
+          "3"
+        ],
+        "worked_solution": "1 and 3\nTutorial note\nAs above BADR would be available for Delroy.\nCash is an exempt asset for CGT.\nThe tax would be paid at the same time as both transactions are in the same tax year."
+      },
+      {
+        "sub_num": 3,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What is Marlon’s chargeable gain for the tax year 2025/26?",
+        "options": [
+          {
+            "key": "A",
+            "text": "£229,600"
+          },
+          {
+            "key": "B",
+            "text": "£0"
+          },
+          {
+            "key": "C",
+            "text": "£114,800"
+          },
+          {
+            "key": "D",
+            "text": "£344,400"
+          }
+        ],
+        "correct_answer": "C",
+        "worked_solution": "C\n£\nProceeds  |  497,000\nLess: Cost  |  (152,600)\n–––––––\nGain  |  344,400\n–––––––\nChargeable gain (1/3 business use)  |  114,800\n–––––––"
+      },
+      {
+        "sub_num": 4,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What is the amount of CGT which could have been saved if Marlon had transferred 50% ownership of the house to Alvita prior to its disposal?",
+        "options": [
+          {
+            "key": "A",
+            "text": "£720"
+          },
+          {
+            "key": "B",
+            "text": "£2,262"
+          },
+          {
+            "key": "C",
+            "text": "£2,982"
+          },
+          {
+            "key": "D",
+            "text": "£9,768"
+          }
+        ],
+        "correct_answer": "C",
+        "worked_solution": "C\n(£3,000 at 24%) + (£37,700 at 6% (24% – 18%)) = £2,982\nTutorial note\nIf half of the gain had been transferred to Alvita, her previously unused annual exempt\namount would have reduced the gain by £3,000. In addition, as Alvita does not have any\ntaxable income, £37,700 of the gain falling in her unused basic rate band will be taxed at the\nlower rate of 18% rather than 24%.\nYou could have answered by calculating the tax liability for Marlon, compared to Marlon and\nAlvita owning it 50:50. This would give you the same answer but would have taken you longer."
+      },
+      {
+        "sub_num": 5,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "Why would it have been beneficial if Marlon had delayed the sale of the house until 6 April 2026?",
+        "options": [
+          {
+            "key": "A",
+            "text": "A lower rate of CGT would have been applicable"
+          },
+          {
+            "key": "B",
+            "text": "Two annual exempt amounts would have been available"
+          },
+          {
+            "key": "C",
+            "text": "Private residence relief would have been greater"
+          },
+          {
+            "key": "D",
+            "text": "The CGT liability would have been paid later"
+          }
+        ],
+        "correct_answer": "D",
+        "worked_solution": "D – The CGT liability would have been paid later"
+      }
+    ],
+    "correct_answer": [
+      "A",
+      [
+        "1",
+        "3"
+      ],
+      "C",
+      "C",
+      "D"
+    ],
+    "full_worked_solution": "OT 1 (Q16):\nA\nCapital gains tax liability – 2025/26\n£\nProceeds  |  240,000\nLess: Cost (W)  |  (25,000)\n–––––––\nGain  |  215,000\nLess: AEA (already utilised)  |  (0)\n–––––––\nTaxable gain  |  215,000\n–––––––\nCapital gains tax (£215,000 × 24%)  |  51,600\n–––––––\nWorking:  |  £\nDeemed cost (MV at gift)  |  240,000\nLess: Gain held over (£240,000 – £25,000)  |  (215,000)\n–––––––\nCost  |  25,000\n–––––––\nTutorial note\nDelroy would have been able to claim business asset disposal relief (BADR) on disposal of the\nshares, as he was an employee and held at least 5% of the shares for at least 2 years prior to\ndisposal. However, Grant is not eligible for BADR, as he was not an employee of the company.\n\nOT 2 (Q17):\n1 and 3\nTutorial note\nAs above BADR would be available for Delroy.\nCash is an exempt asset for CGT.\nThe tax would be paid at the same time as both transactions are in the same tax year.\n\nOT 3 (Q18):\nC\n£\nProceeds  |  497,000\nLess: Cost  |  (152,600)\n–––––––\nGain  |  344,400\n–––––––\nChargeable gain (1/3 business use)  |  114,800\n–––––––\n\nOT 4 (Q19):\nC\n(£3,000 at 24%) + (£37,700 at 6% (24% – 18%)) = £2,982\nTutorial note\nIf half of the gain had been transferred to Alvita, her previously unused annual exempt\namount would have reduced the gain by £3,000. In addition, as Alvita does not have any\ntaxable income, £37,700 of the gain falling in her unused basic rate band will be taxed at the\nlower rate of 18% rather than 24%.\nYou could have answered by calculating the tax liability for Marlon, compared to Marlon and\nAlvita owning it 50:50. This would give you the same answer but would have taken you longer.\n\nOT 5 (Q20):\nD – The CGT liability would have been paid later",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-c1-1",
+        "label": "OT 1: A",
+        "marks": 2
+      },
+      {
+        "id": "spec-c1-2",
+        "label": "OT 2: [\"1\",\"3\"]",
+        "marks": 2
+      },
+      {
+        "id": "spec-c1-3",
+        "label": "OT 3: C",
+        "marks": 2
+      },
+      {
+        "id": "spec-c1-4",
+        "label": "OT 4: C",
+        "marks": 2
+      },
+      {
+        "id": "spec-c1-5",
+        "label": "OT 5: D",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.614",
+    "answer_page": "p.626",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "PA Taper & ANI",
+      "trap_of_question": "PA Taper & ANI: OT 1 (Q16): Capital gains tax liability – 2025/26",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Delroy would have been able to claim business asset disposal relief (BADR) on disposal of the shares, as he was an employee and held at least 5% of the shares for at least 2 years prior to disposal. However, Grant is not eligible for BADR, as he was not an emp",
+      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
+      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+    },
+    "free_marks_items": [
+      "Isolate facts per OT item",
+      "Verify dates and thresholds against FA25 Tax Tables"
+    ]
+  },
+  {
+    "id": "SPEC-CASE-2",
+    "q_num": 17,
+    "title": "Specimen Case 2 · Opal (Inheritance Tax)",
+    "topic": "IHT Specimen Case",
+    "topic_id": 22,
+    "st_chapter": "ch22",
+    "section": "B",
+    "type": "case",
+    "interaction": "case_5ot",
+    "marks": 10,
+    "scenario": "You should assume that today’s date is 15 March 2026.\nOpal is aged 71, and has a chargeable estate for inheritance tax (IHT) purposes valued at £1,025,000.\nShe owns a property, which is her main residence. It is valued at £374,000 and has an outstanding\nrepayment mortgage of £160,000. She also holds life insurance on her own life, currently valued at\n£350,000, but which will pay proceeds of £442,000 in the event of her death.\nOpal owes £22,400 in respect of a personal loan from a bank, and she has also verbally promised\nto pay legal fees of £4,600 incurred by her nephew. Opal expects the cost of her funeral to be\n£5,200, and this cost will be covered by the £6,000 which she has invested in an individual savings\naccount (ISA).\nUnder the terms of her will, Opal has left all of her estate to her children. Opal’s husband is still\nalive.\nOn 14 August 2015, Opal had made a gift of £100,000 to her daughter, and on 7 November 2025,\nshe made a gift of £220,000 to her son. Both these figures are after deducting all available\nexemptions.\nYou should assume that both the value of Opal’s estate and the nil rate band will remain unchanged\nfor future years.",
+    "requirement": "Answer all 5 linked Objective Test questions (Q21–Q25, 2 marks each = 10 marks).",
+    "options": [
+      {
+        "sub_num": 1,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What is the total net value for the property and insurance policy, which will have been included in the calculation of Opal’s chargeable estate?",
+        "options": [
+          {
+            "key": "A",
+            "text": "£816,000"
+          },
+          {
+            "key": "B",
+            "text": "£564,000"
+          },
+          {
+            "key": "C",
+            "text": "£656,000"
+          },
+          {
+            "key": "D",
+            "text": "£724,000"
+          }
+        ],
+        "correct_answer": "C",
+        "worked_solution": "C\n£\nProperty  |  374,000\nLess: Repayment mortgage  |  (160,000)\n–––––––\nNet value of property  |  214,000\nInsurance policy proceeds  |  442,000\n–––––––\nTotal net value  |  656,000\n–––––––\nTutorial note\nRepayment and interest only mortgages should be deducted from the value of the property\nin the death estate.\nAn insurance policy on the life of the deceased should be included in the death estate at the\nproceeds received not the market value while they are alive."
+      },
+      {
+        "sub_num": 2,
+        "marks": 2,
+        "type": "multi",
+        "interaction": "multi_select",
+        "prompt": "Which TWO of the following amounts will have been deducted in calculating Opal’s\nchargeable estate?\nSelect TWO options.",
+        "options": [
+          {
+            "key": "1",
+            "text": "Personal loan from a bank of £22,400"
+          },
+          {
+            "key": "2",
+            "text": "Promise to pay legal fees of £4,600"
+          },
+          {
+            "key": "3",
+            "text": "Funeral cost of £5,200"
+          },
+          {
+            "key": "4",
+            "text": "ISA investment of £6,000"
+          }
+        ],
+        "correct_answer": [
+          "1",
+          "3"
+        ],
+        "worked_solution": "1 and 3\nTutorial note\nThe promise to pay the nephew’s legal fees is not deductible as it is not legally enforceable.\nAn ISA investment is an asset so it would be added to, rather than deducted from, the estate."
+      },
+      {
+        "sub_num": 3,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What amount of IHT will be payable in respect of Opal’s chargeable estate were she to die on 20 March 2026?",
+        "options": [
+          {
+            "key": "A",
+            "text": "£210,000"
+          },
+          {
+            "key": "B",
+            "text": "£298,000"
+          },
+          {
+            "key": "C",
+            "text": "£338,000"
+          },
+          {
+            "key": "D",
+            "text": "£295,600"
+          }
+        ],
+        "correct_answer": "B",
+        "worked_solution": "B\n£  |  £\nGross chargeable estate  |  1,025,000\nLess: RNRB  |  (175,000)\nNRB at death  |  325,000\nLess: Gross chargeable transfers (20.3.2019 – 20.3.2026)  |  (220,000)\n–––––––\n(105,000)\n––––––––\nTaxable amount  |  745,000\n––––––––\nIHT payable at 40%  |  298,000\n––––––––\nTutorial note\nOpal’s estate is reduced by the available nil rate band of £105,000 (£325,000 – £220,000).\nThe PET on 7 November 2025 reduces the nil rate band available as it is within seven years of\nthe date of death. The previous PET is more than seven years before death.\nOpal also qualifies for the full residence nil rate band as she is leaving her main residence to\nher direct descendants and it is valued in excess of £175,000."
+      },
+      {
+        "sub_num": 4,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "By how much would the IHT payable on Opal’s death be reduced if she were to live for another seven years until 20 March 2033, compared to if she were to die on 20 March 2026?",
+        "options": [
+          {
+            "key": "A",
+            "text": "£88,000"
+          },
+          {
+            "key": "B",
+            "text": "£40,000"
+          },
+          {
+            "key": "C",
+            "text": "£128,000"
+          },
+          {
+            "key": "D",
+            "text": "£0"
+          }
+        ],
+        "correct_answer": "A",
+        "worked_solution": "£88,000\n£220,000 at 40% = £88,000\nTutorial note\nIf Opal were to live until 20 March 2033 the PET on 7 November 2025 would no longer be\nchargeable and would result in an additional available nil rate band on death of £220,000."
+      },
+      {
+        "sub_num": 5,
+        "marks": 2,
+        "type": "multi",
+        "interaction": "multi_select",
+        "prompt": "Which TWO of the following conditions must be met if Opal wants to make gifts out of her\nincome, so that these gifts are exempt from IHT?\nSelect TWO options.",
+        "options": [
+          {
+            "key": "1",
+            "text": "The gifts cannot exceed 10% of income"
+          },
+          {
+            "key": "2",
+            "text": "The gifts must be habitual"
+          },
+          {
+            "key": "3",
+            "text": "Opal must have enough remaining income to maintain her normal standard of living"
+          },
+          {
+            "key": "4",
+            "text": "Opal must make the gifts monthly or quarterly"
+          }
+        ],
+        "correct_answer": [
+          "2",
+          "3"
+        ],
+        "worked_solution": "2 and 3"
+      }
+    ],
+    "correct_answer": [
+      "C",
+      [
+        "1",
+        "3"
+      ],
+      "B",
+      "A",
+      [
+        "2",
+        "3"
+      ]
+    ],
+    "full_worked_solution": "OT 1 (Q21):\nC\n£\nProperty  |  374,000\nLess: Repayment mortgage  |  (160,000)\n–––––––\nNet value of property  |  214,000\nInsurance policy proceeds  |  442,000\n–––––––\nTotal net value  |  656,000\n–––––––\nTutorial note\nRepayment and interest only mortgages should be deducted from the value of the property\nin the death estate.\nAn insurance policy on the life of the deceased should be included in the death estate at the\nproceeds received not the market value while they are alive.\n\nOT 2 (Q22):\n1 and 3\nTutorial note\nThe promise to pay the nephew’s legal fees is not deductible as it is not legally enforceable.\nAn ISA investment is an asset so it would be added to, rather than deducted from, the estate.\n\nOT 3 (Q23):\nB\n£  |  £\nGross chargeable estate  |  1,025,000\nLess: RNRB  |  (175,000)\nNRB at death  |  325,000\nLess: Gross chargeable transfers (20.3.2019 – 20.3.2026)  |  (220,000)\n–––––––\n(105,000)\n––––––––\nTaxable amount  |  745,000\n––––––––\nIHT payable at 40%  |  298,000\n––––––––\nTutorial note\nOpal’s estate is reduced by the available nil rate band of £105,000 (£325,000 – £220,000).\nThe PET on 7 November 2025 reduces the nil rate band available as it is within seven years of\nthe date of death. The previous PET is more than seven years before death.\nOpal also qualifies for the full residence nil rate band as she is leaving her main residence to\nher direct descendants and it is valued in excess of £175,000.\n\nOT 4 (Q24):\n£88,000\n£220,000 at 40% = £88,000\nTutorial note\nIf Opal were to live until 20 March 2033 the PET on 7 November 2025 would no longer be\nchargeable and would result in an additional available nil rate band on death of £220,000.\n\nOT 5 (Q25):\n2 and 3",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-c2-1",
+        "label": "OT 1: C",
+        "marks": 2
+      },
+      {
+        "id": "spec-c2-2",
+        "label": "OT 2: [\"1\",\"3\"]",
+        "marks": 2
+      },
+      {
+        "id": "spec-c2-3",
+        "label": "OT 3: B",
+        "marks": 2
+      },
+      {
+        "id": "spec-c2-4",
+        "label": "OT 4: A",
+        "marks": 2
+      },
+      {
+        "id": "spec-c2-5",
+        "label": "OT 5: [\"2\",\"3\"]",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.616",
+    "answer_page": "p.628",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "PA Taper & ANI",
+      "trap_of_question": "PA Taper & ANI: OT 1 (Q21): £",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Repayment and interest only mortgages should be deducted from the value of the property in the death estate. An insurance policy on the life of the deceased should be included in the death estate at the proceeds received not the market value while they are ali",
+      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
+      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+    },
+    "free_marks_items": [
+      "Isolate facts per OT item",
+      "Verify dates and thresholds against FA25 Tax Tables"
+    ]
+  },
+  {
+    "id": "SPEC-CASE-3",
+    "q_num": 18,
+    "title": "Specimen Case 3 · Glacier Ltd (VAT)",
+    "topic": "VAT Specimen Case",
+    "topic_id": 23,
+    "st_chapter": "ch23-24",
+    "section": "B",
+    "type": "case",
+    "interaction": "case_5ot",
+    "marks": 10,
+    "scenario": "The following information is available in respect of Glacier Ltd’s value added tax (VAT) for the\nquarter ended 31 March 2026:\n1  |  Invoices were issued for sales of £44,600 to VAT registered customers. Of this figure, £35,200\nwas in respect of exempt sales and the balance in respect of standard-rated sales. The\nstandard-rated sales figure is exclusive of VAT.\n2  |  In addition to the above, on 1 March 2026 Glacier Ltd issued a VAT invoice for £8,000 plus\nVAT of £1,600 to a VAT registered customer in respect of a contract for services which will be\ncompleted on 15 April 2026. The customer paid for the contract in two instalments of £4,800\non 31 March 2026 and 30 April 2026.\n3  |  The managing director of Glacier Ltd is provided with free fuel for private mileage driven in\nher company car. During the quarter ended 31 March 2026, the total cost of fuel for business\nand private mileage was £720, of which £270 was for private mileage. The relevant quarterly\nscale rate is £479. All of these figures are inclusive of VAT.\nFor the quarters ended 30 September 2024, 30 June 2025 and 31 December 2025, Glacier Ltd was\none month late in submitting its VAT returns and in paying the related VAT liabilities. All of the\ncompany’s other VAT returns have been submitted on time.",
+    "requirement": "Answer all 5 linked Objective Test questions (Q26–Q30, 2 marks each = 10 marks).",
+    "options": [
+      {
+        "sub_num": 1,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What is the amount of output VAT payable by Glacier Ltd in respect of its sales for the quarter ended 31 March 2026?",
+        "options": [
+          {
+            "key": "A",
+            "text": "£2,680"
+          },
+          {
+            "key": "B",
+            "text": "£3,480"
+          },
+          {
+            "key": "C",
+            "text": "£10,520"
+          },
+          {
+            "key": "D",
+            "text": "£1,880"
+          }
+        ],
+        "correct_answer": "B",
+        "worked_solution": "£3,480\n(£9,400 (£44,600 – £35,200) × 20%) + £1,600 = £3,480\nTutorial note\nThe basic tax point for a supply of services is the date when they are completed, but if a VAT\ninvoice is issued or payment received before the basic tax point, then this becomes the actual\ntax point. Therefore, the tax point for the additional contract is when the VAT invoice was\nissued on 1 March."
+      },
+      {
+        "sub_num": 2,
+        "marks": 2,
+        "type": "multi",
+        "interaction": "pair_dropdown",
+        "prompt": "Calculate the amounts required to complete the following sentence:\nGlacier Ltd will include output VAT of £  |  and input VAT of\n£  |  on its VAT return for the quarter ended 31 March 2026 in\nrespect of the managing director’s company car.\nSelect the amounts Glacier Ltd will include on its VAT return for the quarter ended 31 March 2026 for output VAT and input VAT on the company car fuel.",
+        "options": [
+          {
+            "group": "Output VAT (£)",
+            "choices": [
+              "£48",
+              "£80",
+              "£120",
+              "£479"
+            ]
+          },
+          {
+            "group": "Input VAT (£)",
+            "choices": [
+              "£45",
+              "£80",
+              "£120",
+              "£720"
+            ]
+          }
+        ],
+        "correct_answer": [
+          "£80",
+          "£120"
+        ],
+        "worked_solution": "Output VAT of £80 and Input VAT of £120\nOutput VAT £479 × 20/120 = £80\nInput VAT £720 × 20/120 = £120"
+      },
+      {
+        "sub_num": 3,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What penalty will Glacier Ltd be charged if the company is 20 days late in submitting its VAT return and paying its VAT liability for the quarter ended 31 March 2026?",
+        "options": [
+          {
+            "key": "A",
+            "text": "3% of the VAT liability and £200"
+          },
+          {
+            "key": "B",
+            "text": "3% of the VAT liability"
+          },
+          {
+            "key": "C",
+            "text": "6% of the VAT liability and £200"
+          },
+          {
+            "key": "D",
+            "text": "6% of the VAT liability"
+          }
+        ],
+        "correct_answer": "A",
+        "worked_solution": "A\n3% of the VAT liability is charged for paying between 16 and 30 days late.\nA £200 penalty is payable for submitting the return late as the threshold of four points has\nbeen reached.\nTutorial note\nGlacier Ltd was late in submitting VAT returns for three previous quarters and therefore\nalready has three penalty points. None of these points are more than two years old and\ntherefore none have expired. When submitting the return for the quarter ended 31 March\n2026 late, Glacier Ltd reaches the threshold of four penalty points and will be charged a £200\npenalty."
+      },
+      {
+        "sub_num": 4,
+        "marks": 2,
+        "type": "mcq",
+        "interaction": "single_mcq",
+        "prompt": "What is the minimum requirement which Glacier Ltd needs to meet in order to avoid any future penalties?",
+        "options": [
+          {
+            "key": "A",
+            "text": "Submit four consecutive quarterly VAT returns on time"
+          },
+          {
+            "key": "B",
+            "text": "Submit eight consecutive quarterly VAT returns on time and also pay the related VAT liabilities on time"
+          },
+          {
+            "key": "C",
+            "text": "Submit eight consecutive quarterly VAT returns on time"
+          },
+          {
+            "key": "D",
+            "text": "Submit four consecutive quarterly VAT returns on time and also pay the related VAT liabilities on time"
+          }
+        ],
+        "correct_answer": "D",
+        "worked_solution": "D"
+      },
+      {
+        "sub_num": 5,
+        "marks": 2,
+        "type": "multi",
+        "interaction": "pair_dropdown",
+        "prompt": "Glacier Ltd will be required to issue a VAT invoice in certain circumstances.\nComplete the following sentence by matching one of the “types of supply” and one of the\n“types of customer” into each target area.\nGlacier Ltd will be required to issue a VAT invoice when\nis made to\nTypes of supply  |  Types of customer\na standard-rated supply  |  a VAT registered customer\nany type of supply  |  any customer\nComplete: Glacier Ltd will be required to issue a VAT invoice when [Type of supply] is made to [Type of customer].",
+        "options": [
+          {
+            "group": "Types of supply",
+            "choices": [
+              "a standard-rated supply",
+              "any type of supply"
+            ]
+          },
+          {
+            "group": "Types of customer",
+            "choices": [
+              "a VAT registered customer",
+              "any customer"
+            ]
+          }
+        ],
+        "correct_answer": [
+          "a standard-rated supply",
+          "a VAT registered customer"
+        ],
+        "worked_solution": "Standard-rated supply and VAT registered customer\nTutorial note\nGlacier Ltd must issue a VAT invoice when it makes a standard-rated supply to a VAT\nregistered customer. However, there is no requirement to do so if the supply is exempt or if\nthe supply is to a non-VAT registered customer.\nA VAT invoice should be issued within 30 days of the date when the supply is treated as being\nmade."
+      }
+    ],
+    "correct_answer": [
+      "B",
+      [
+        "£80",
+        "£120"
+      ],
+      "A",
+      "D",
+      [
+        "a standard-rated supply",
+        "a VAT registered customer"
+      ]
+    ],
+    "full_worked_solution": "OT 1 (Q26):\n£3,480\n(£9,400 (£44,600 – £35,200) × 20%) + £1,600 = £3,480\nTutorial note\nThe basic tax point for a supply of services is the date when they are completed, but if a VAT\ninvoice is issued or payment received before the basic tax point, then this becomes the actual\ntax point. Therefore, the tax point for the additional contract is when the VAT invoice was\nissued on 1 March.\n\nOT 2 (Q27):\nOutput VAT of £80 and Input VAT of £120\nOutput VAT £479 × 20/120 = £80\nInput VAT £720 × 20/120 = £120\n\nOT 3 (Q28):\nA\n3% of the VAT liability is charged for paying between 16 and 30 days late.\nA £200 penalty is payable for submitting the return late as the threshold of four points has\nbeen reached.\nTutorial note\nGlacier Ltd was late in submitting VAT returns for three previous quarters and therefore\nalready has three penalty points. None of these points are more than two years old and\ntherefore none have expired. When submitting the return for the quarter ended 31 March\n2026 late, Glacier Ltd reaches the threshold of four penalty points and will be charged a £200\npenalty.\n\nOT 4 (Q29):\nD\n\nOT 5 (Q30):\nStandard-rated supply and VAT registered customer\nTutorial note\nGlacier Ltd must issue a VAT invoice when it makes a standard-rated supply to a VAT\nregistered customer. However, there is no requirement to do so if the supply is exempt or if\nthe supply is to a non-VAT registered customer.\nA VAT invoice should be issued within 30 days of the date when the supply is treated as being\nmade.",
+    "mark_scheme_steps": [
+      {
+        "id": "spec-c3-1",
+        "label": "OT 1: B",
+        "marks": 2
+      },
+      {
+        "id": "spec-c3-2",
+        "label": "OT 2: [\"£80\",\"£120\"]",
+        "marks": 2
+      },
+      {
+        "id": "spec-c3-3",
+        "label": "OT 3: A",
+        "marks": 2
+      },
+      {
+        "id": "spec-c3-4",
+        "label": "OT 4: D",
+        "marks": 2
+      },
+      {
+        "id": "spec-c3-5",
+        "label": "OT 5: [\"a standard-rated supply\",\"a VAT registered customer\"]",
+        "marks": 2
+      }
+    ],
+    "kit_page": "p.617",
+    "answer_page": "p.629",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "UK Residence",
+      "trap_of_question": "UK Residence: OT 1 (Q26): (£9,400 (£44,600 – £35,200) × 20%) + £1,600 = £3,480",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "The basic tax point for a supply of services is the date when they are completed, but if a VAT invoice is issued or payment received before the basic tax point, then this becomes the actual tax point. Therefore, the tax point for the additional contract is whe",
+      "speed_trick": "Always test Automatic Non-UK -> Automatic UK -> Sufficient Ties strictly in order; never jump straight to ties.",
+      "twist_prediction": "Next sitting they could flip whether the taxpayer was UK resident in any of the previous 3 tax years (leaver vs arriver ties)."
+    },
+    "free_marks_items": [
+      "Isolate facts per OT item",
+      "Verify dates and thresholds against FA25 Tax Tables"
+    ]
+  },
+  {
+    "id": "SPEC-Q31",
+    "q_num": 31,
+    "title": "Specimen Q31 · You should assume that today’s date is 1 March 2025.",
+    "topic": "Incorporation Tax Planning",
+    "topic_id": 2,
+    "st_chapter": "ch2, ch11, ch13",
+    "section": "C",
+    "type": "cr",
+    "interaction": "constructed_response",
+    "marks": 10,
+    "scenario": "This scenario relates to one requirement.\nSarah is currently self-employed. If she continues to trade on a self-employed basis, her total\nincome tax liability and national insurance contributions (NIC) for the tax year 2025/26 will\nbe £9,732.\nHowever, Sarah is considering incorporating her business on 6 April 2025. The forecast\ntaxable total profits of the new limited company for the year ended 5 April 2026 will be\n£50,000 (before taking account of any director’s remuneration). Sarah will pay herself gross\ndirector’s remuneration of £30,000 and dividends of £10,000. The balance of the profits will\nremain undrawn within the new company.\nSarah has no other income.",
+    "requirement": "Required:\nDetermine whether or not there will be an overall saving of tax and national insurance\ncontributions (NIC) for the year ended 5 April 2026 if Sarah incorporates her business on\n6 April 2025.\nNotes:\n1  |  You are expected to calculate the income tax payable by Sarah, the class 1 NIC\npayable by Sarah and the new limited company, and the corporation tax liability of\nthe new limited company for the year ended 5 April 2026.\n2  |  You should assume that the rates of corporation tax remain unchanged.\n(10 marks)",
+    "options": [],
+    "correct_answer": "See full proforma computation & step marking scheme.",
+    "full_worked_solution": "SARAH\nThe total tax and NIC cost if Sarah incorporates her business is £12,549 (£4,317 (W1) + £1,394\n(W2) + £3,750 (W2) + £3,088 (W3)).\nTherefore, if Sarah incorporated her business there would be an overall increase in tax and\nNIC of £2,817 (£12,549 – £9,732) compared to continuing on a self-employed basis.\nWorkings\n(W1) Sarah’s income tax payable\n£\nDirector’s remuneration  |  30,000\nDividends  |  10,000\n––––––\n40,000\nLess: Personal allowance  |  (12,570)\n––––––\nTaxable income  |  27,430\n––––––\nIncome tax  |  £\n£\n17,430 × 20%  |  3,486\n500 × 0%  |  0\n9,500 × 8.75%  |  831\n––––––\n27,430\n––––––  |  ––––––\nIncome tax payable  |  4,317\n––––––\n(W2) National insurance contributions\n£\nEmployee class 1: (£30,000 – £12,570) × 8%  |  1,394\n––––––\nEmployer’s class 1: (£30,000 – £5,000) × 15%  |  3,750\n––––––\n(W3) Corporation tax liability\n£\nTrading profit  |  50,000\nDirector’s remuneration  |  (30,000)\nEmployer’s class 1 NIC  |  (3,750)\n––––––\nTaxable total profits  |  16,250\n––––––\nCorporation tax at 19%  |  3,088\n––––––\nACCA Marking scheme\nMarks\nSarah’s income tax payable  |  3.5\nNational insurance contributions  |  3.0\nCorporation tax liability  |  2.0\nTotal tax and NIC cost  |  1.0\nIncrease  |  0.5\n––––\nTotal  |  10.0\n––––",
+    "mark_scheme_steps": [
+      {
+        "id": "ms-1",
+        "label": "Sarah’s income tax payable",
+        "marks": 3.5
+      },
+      {
+        "id": "ms-2",
+        "label": "National insurance contributions",
+        "marks": 3
+      },
+      {
+        "id": "ms-3",
+        "label": "Corporation tax liability",
+        "marks": 2
+      },
+      {
+        "id": "ms-4",
+        "label": "Total tax and NIC cost",
+        "marks": 1
+      },
+      {
+        "id": "ms-5",
+        "label": "Increase",
+        "marks": 0.5
+      }
+    ],
+    "kit_page": "p.619",
+    "answer_page": "p.631",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "PA Taper & ANI",
+      "trap_of_question": "PA Taper & ANI: SARAH The total tax and NIC cost if Sarah incorporates her business is £12,549 (£4,317 (W1) + £1,394",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
+      "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS personal pension contributions; PA vanishes completely at £125,140.",
+      "twist_prediction": "Next sitting they could state net Gift Aid or net pension payment instead of gross, requiring × 100/80 before deducting."
+    },
+    "free_marks_items": [
+      "Show Personal Allowance line explicitly (even if £0 when ANI > £125,140)"
+    ]
+  },
+  {
+    "id": "SPEC-Q32",
+    "q_num": 32,
+    "title": "Specimen Q32 · This scenario relates to two requirements.",
+    "topic": "Income Tax & Admin",
+    "topic_id": 5,
+    "st_chapter": "ch4, ch5, ch9, ch12",
+    "section": "C",
+    "type": "cr",
+    "interaction": "constructed_response",
+    "marks": 15,
+    "scenario": "On 6 April 2025, Simon started employment with Echo Ltd. On 1 January 2026, he started in\npartnership with Art running a small music venue, preparing accounts to 31 March. The\nfollowing information is available for the tax year 2025/26:\nEmployment\n1  |  During the tax year 2025/26, Simon was paid a gross annual salary of £24,700.\n2  |  Throughout the tax year 2025/26, Echo Ltd provided Simon with living\naccommodation. The company had purchased the property in 2015 for £89,000, and\nit was valued at £143,000 on 6 April 2025. The annual value of the property is £4,600.\nThe property was furnished by Echo Ltd during March 2025 at a cost of £9,400. The\nliving accommodation is not job-related.\n3  |  On 1 December 2025, Echo Ltd provided Simon with an interest-free loan of £84,000,\nwhich he used to purchase a holiday cottage.\nPartnership\n1  |  The partnership uses the cash basis, but claims capital allowances on cars. The\npartnership’s tax adjusted trading profit for the three-month period ended 31 March\n2026 is £29,700. This figure is before taking account of capital allowances.\n2  |  The only item of plant and machinery owned by the partnership is a car which cost\n£25,000 on 1 February 2026. The car has a CO2 emission rate of 125 grams per\nkilometre. It is used by Art, and 40% of the mileage is for private journeys.\n3  |  Profits are shared 40% to Simon and 60% to Art. This is after paying an annual salary\nof £6,000 to Art.\nProperty income\n1  |  Simon owns a freehold house, which he began to let out furnished on 6 April 2025. The\nproperty was let throughout the tax year 2025/26 at a monthly rent of £660 received\nin advance. All rents were received on the due dates.\n2  |  During the tax year 2025/26, Simon paid council tax of £1,320 in respect of the\nproperty, and also spent £660 on replacement carpets.\nPrior to 6 April 2025, Simon’s only income was from a previous employment.",
+    "requirement": "Required:\n(a) Calculate Simon’s taxable income for the tax year 2025/26.  |  (12 marks)\n(b) (i) State the date by which Simon needs to notify HMRC of his new property and\nself-employment income in the tax year 2025/26.  |  (1 mark)\n(ii) State the date by which Simon’s online income tax return is due to be\nsubmitted to HMRC.  |  (1 mark)\n(iii) State the date by which Simon’s income tax liability is payable for the tax year\n2025/26.  |  (1 mark)\n(Total: 15 marks)",
+    "options": [],
+    "correct_answer": "See full proforma computation & step marking scheme.",
+    "full_worked_solution": "SIMON\n(a) Simon – Taxable income 2025/26\n£\nEmployment income\nSalary  |  24,700\nLiving accommodation  |  – Annual value  |  4,600\n– Additional benefit (W1)  |  2,550\n– Furniture (£9,400 × 20%)  |  1,880\nBeneficial loan (£84,000 × 4/12 × 3.75%)  |  1,050\n––––––\n34,780\nTrading profit (W2)  |  11,190\nProperty income (W4)  |  5,940\n––––––\nTotal income  |  51,910\nLess: Personal allowance  |  (12,570)\n––––––\nTaxable income  |  39,340\n––––––\nWorkings\n(W1) Living accommodation additional benefit\n1  |  The benefit is based on the market value when first provided.\n£\nMarket value  |  143,000\nLimit  |  (75,000)\n–––––––\n68,000\n–––––––\n2  |  The additional benefit is therefore £2,550 (£68,000 at 3.75%).\nTutorial note\nThe property was purchased more than six years before first being provided, so the benefit is\nbased on the market value when first provided.\n(W2) Trading profit\n1  |  Simon’s share of the partnership’s trading profit for the period ended\n31 March 2026 is £11,190 calculated as follows:\n£\nTrading profit  |  29,700\nCapital allowances (W3)  |  (225)\n––––––\n29,475\nSalary paid to Art (£6,000 × 3/12)  |  (1,500)\n––––––\n27,975\n––––––\nProfit share (£27,975 × 40%)  |  11,190\n––––––\n(W3) Capital allowances\nCar  |  Allowances\n£  |  £\nAddition  |  25,000\nWDA @ 6% × 3/12  |  (375)  |  × 60%  |  225\n––––––  |  ––––\nTWDV c/f  |  24,625\n––––––\nTutorial note\nThe partnership’s car has CO2 emissions over 50 grams per kilometre and therefore qualifies\nfor writing down allowances (WDA) at the rate of 6%. The WDA must be time apportioned for\nthe short accounting period, and then restricted for the private use.\n(W4) Property income\n£  |  £\nRent received (£660 × 12)  |  7,920\nCouncil tax  |  1,320\nReplacement carpets  |  660\n––––––\n(1,980)\n––––––\nProperty income  |  5,940\n––––––\nTutorial note\nThe initial cost of purchasing domestic items for use by the tenant, such as carpets, is not\nallowable, however, the cost of replacing such items is an allowable deduction.\n(b) (i) Simon will have to notify HMRC of his new source of income by 5 October 2026.\n(ii) Simon’s online tax return will be due by 31 January 2027.\n(iii) Simon will have to pay the tax liability for the tax year 2025/26 by 31 January\n2027. No payments on account will be due as he has not previously had any\nincome that would not be subject to PAYE.\nACCA Marking scheme\nMarks\n(a)  |  Calculate Simon’s taxable income\nEmployment income  |  5.0\nTrading profit  |  4.0\nProperty income  |  2.5\nPersonal allowance  |  0.5\n––––\n12.0\n––––\n(b)  |  (i) Date to inform HMRC of new source of income  |  1.0\n(ii) Date to submit online tax return  |  1.0\n(iii)Date by which income tax is payable  |  1.0\n––––\n3.0\n––––\nTotal  |  15.0\n––––",
+    "mark_scheme_steps": [
+      {
+        "id": "ms-1",
+        "label": "Employment income",
+        "marks": 5
+      },
+      {
+        "id": "ms-2",
+        "label": "Trading profit",
+        "marks": 4
+      },
+      {
+        "id": "ms-3",
+        "label": "Property income",
+        "marks": 2.5
+      },
+      {
+        "id": "ms-4",
+        "label": "Personal allowance",
+        "marks": 0.5
+      },
+      {
+        "id": "ms-5",
+        "label": "(b) | (i) Date to inform HMRC of new source of income",
+        "marks": 1
+      },
+      {
+        "id": "ms-6",
+        "label": "(ii) Date to submit online tax return",
+        "marks": 1
+      },
+      {
+        "id": "ms-7",
+        "label": "(iii)Date by which income tax is payable",
+        "marks": 1
+      }
+    ],
+    "kit_page": "p.620",
+    "answer_page": "p.632",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Cars & Fuel Benefits",
+      "trap_of_question": "Cars & Fuel Benefits: SIMON (a) Simon – Taxable income 2025/26",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "The property was purchased more than six years before first being provided, so the benefit is based on the market value when first provided. (W2) Trading profit 1 | Simon’s share of the partnership’s trading profit for the period ended 31 March 2026 is £11,190",
+      "speed_trick": "Compute % first (round CO2 DOWN to nearest 5, check RDE2, apply 37% cap), then list price × % × months/12 in one line.",
+      "twist_prediction": "Next sitting they could change the car to non-RDE2 diesel (+4%, max 37%) or shift availability to 6 October (6/12)."
+    },
+    "free_marks_items": [
+      "Deduct PAYE from income tax liability (not from income)",
+      "State full exact dates including calendar year (e.g. 31 January 2027)",
+      "Show Personal Allowance line explicitly (even if £0 when ANI > £125,140)"
+    ]
+  },
+  {
+    "id": "SPEC-Q33",
+    "q_num": 33,
+    "title": "Specimen Q33 · (a) This scenario relates to one requirement.",
+    "topic": "Corporation Tax & iXBRL",
+    "topic_id": 13,
+    "st_chapter": "ch13, ch16",
+    "section": "C",
+    "type": "cr",
+    "interaction": "constructed_response",
+    "marks": 15,
+    "scenario": "You are a trainee accountant and your manager has asked you to correct a corporation\ntax computation which has been prepared by the managing director of Naive Ltd. The\ncorporation tax computation is for the year ended 31 March 2026 and contains a\nsignificant number of errors:\nNaive Ltd – Corporation tax computation for the year ended 31 March 2026\n£\nTrading profit (W1)  |  372,900\nLoan interest received (W2)  |  32,100\n–––––––\n405,000\n–––––––\nCorporation tax (£405,000 at 25%)  |  101,250\n–––––––\nWorkings\n(W1) Trading profit\n£\nOperating profit  |  274,530\nDepreciation  |  15,740\nDonations to political parties  |  400\nQualifying charitable donations  |  900\nAccountancy  |  2,300\nLegal fees in connection with the issue of loan notes (the\nloan was used to finance the company’s trading activities)  |  5,700\nEntertaining suppliers  |  3,600\nEntertaining employees  |  1,700\nGifts to customers (pens costing £40 each and displaying\nNaive Ltd’s name)  |  920\nGifts to customers (food hampers costing £45 each and\ndisplaying Naive Ltd’s name)  |  1,650\nCapital allowances (W3)  |  65,460\n–––––––\nTrading profit  |  372,900\n–––––––\n(W2) Loan interest received\n£\nLoan interest receivable  |  32,800\nAccrued at 1 April 2025  |  10,600\nAccrued at 31 March 2026  |  (11,300)\n–––––––\nLoan interest received  |  32,100\n–––––––\nThe loan was made for non-trading purposes.\n(W3) Capital allowances\nMain  |  Car  |  Special Allowances\npool  |  rate pool\n£  |  £  |  £  |  £\nTWDV brought forward  |  12,400  |  14,500\nAdditions\nNew machinery  |  42,300\nCar 1  |  13,800\nCar 2  |  18,100\n––––––\n68,500\nAIA  |  (68,500)  |  68,500\nDisposal proceeds  |  (8,200)\n––––––\n4,300\nBalancing allowance  |  (4,300)  |  (4,300)\n––––––\nWDA @ 18%  |  (2,520) × 50%  |  1,260\n––––––  |  ––––––\nTWDV carried forward  |  0  |  11,480\n––––––  |  ––––––  |  ––––––\nTotal allowances  |  65,460\n––––––\n1  |  Car 1 has a CO2 emission rate of 50 grams per kilometre.\n2  |  Car 2 has a CO2 emission rate of 105 grams per kilometre. This car is used by the\nsales manager and 50% of the mileage is for private journeys.\n3  |  All of the items included in the special rate pool at 1 April 2025 were sold for\n£8,200 during the year ended 31 March 2026. The original cost of these items\nwas £16,200.",
+    "requirement": "Required:\nPrepare a revised version of Naive Ltd’s corporation tax computation for the year\nended 31 March 2026.\nNote: Your calculations should commence with the operating profit figure of\n£274,530, and you should indicate by the use of zero (0) any items in the\ncomputation of the trading profit for which no adjustment is required.\n(12 marks)\n(b) This scenario relates to one requirement.\nThe managing director of Naive Ltd understands that the company will have to file its\nself-assessment corporation tax returns online, and that the supporting accounts and\ntax computations will have to be filed using the inline eXtensible Business Reporting\nLanguage (iXBRL). The managing director is concerned about how the company will be\nable to produce documents in this format.\nRequired:\nExplain the options available to Naive Ltd regarding the production of accounts and\ntax computations in the iXBRL format.  |  (3 marks)\n(Total: 15 marks)",
+    "options": [],
+    "correct_answer": "See full proforma computation & step marking scheme.",
+    "full_worked_solution": "NAIVE LTD\n(a) Naive Ltd – Corporation tax computation for the year ended 31 March 2026\n£\nTrading profit (W1)  |  248,340\nNon-trade loan relationship income  |  32,800\n–––––––\nTotal profits  |  281,140\nQualifying charitable donations  |  (900)\n–––––––\nTaxable total profits  |  280,240\n–––––––\nCorporation tax at 25%  |  70,060\n–––––––\nTutorial note\nCorporation tax is payable at 25% as the taxable total profits exceed £250,000.\nNon-trade loan relationship income is taxable on the accruals basis and it is therefore the\ninterest receivable rather than the interest paid which should be taxed.\nWorkings\n(W1) Trading profit for the year ended 31 March 2026\n£\nOperating profit  |  274,530\nDepreciation  |  15,740\nDonations to political parties  |  400\nQualifying charitable donations  |  900\nAccountancy  |  0\nLegal fees  |  0\nEntertaining suppliers  |  3,600\nEntertaining employees  |  0\nGifts to customers – pens  |  0\nGifts to customers – food hampers  |  1,650\nCapital allowances (W2)  |  (48,480)\n–––––––\nTrading profit  |  248,340\n–––––––\nTutorial note\n1  |  The only exception to the non-deductibility of entertainment expenditure is when it is\nin respect of employees.\n2  |  Gifts to customers are an allowable deduction if they cost less than £50 per recipient\nper year, are not of food, drink, tobacco or vouchers for exchangeable goods, and carry\na conspicuous advertisement for the company making the gift.\n(W2) Capital allowances\nMain  |  Special Allowances\npool  |  rate pool\n£  |  £  |  £  |  £\nTWDV b/f  |  12,400  |  14,500\nAdditions not qualifying for AIA/FYA\nCar (Note 1)  |  13,800\nCar (Note 2)  |  18,100\nAdditions qualifying for AIA\n(Note 3)\nMachinery  |  42,300\nAIA @ 100%  |  (42,300)  |  42,300\n––––––\n0  |  0\nProceeds  |  (8,200)\n––––––  |  ––––––\n26,200  |  24,400\nWDA @ 18%  |  (4,716)  |  4,716\nWDA @ 6%  |  (1,464)  |  1,464\n––––––  |  ––––––\nTWDV c/f  |  21,484  |  22,936\n––––––  |  ––––––  |  ––––––\nTotal allowances  |  48,480\n––––––\nTutorial note\n1  |  Car 1 has CO2 emissions between 1 and 50 grams per kilometre and therefore qualifies\nfor writing down allowances at the rate of 18%.\n2  |  Car 2 has CO2 emissions over 50 grams per kilometre and therefore qualifies for writing\ndown allowances at the rate of 6%. The private use of the car is irrelevant, since such\nusage will be taxed on the employee as a benefit.\n3  |  It is preferable to claim the AIA, rather than full expensing, as there is sufficient AIA\navailable, and this cannot result in a balancing charge on disposal of the machinery.\n(b) 1  |  If Naive Ltd has straightforward accounts, it could use the software provided by\nHM Revenue & Customs. This automatically produces accounts and tax\ncomputations in the iXBRL format.\n2  |  Alternatively, other software which automatically produces iXBRL accounts and\ncomputations could be used.\n3  |  A tagging service could be used to apply the appropriate tags to the accounts\nand tax computations, or Naive Ltd could use software to tag documents itself.\nACCA Marking scheme\nMarks\n(a)  |  Corporation tax computation\nTrading profit  |  5.0\nCapital allowances  |  5.0\nNon-trade loan interest income  |  1.0\nQualifying charitable donations  |  0.5\nCorporation tax  |  0.5\n––––\n12.0\n––––\n(b)  |  iXBRL\nHMRC software  |  1.0\nOther software  |  1.0\nTagging service  |  1.0\n––––\n3.0\n––––\nTotal  |  15.0\n––––",
+    "mark_scheme_steps": [
+      {
+        "id": "ms-1",
+        "label": "Trading profit",
+        "marks": 5
+      },
+      {
+        "id": "ms-2",
+        "label": "Capital allowances",
+        "marks": 5
+      },
+      {
+        "id": "ms-3",
+        "label": "Non-trade loan interest income",
+        "marks": 1
+      },
+      {
+        "id": "ms-4",
+        "label": "Qualifying charitable donations",
+        "marks": 0.5
+      },
+      {
+        "id": "ms-5",
+        "label": "Corporation tax",
+        "marks": 0.5
+      },
+      {
+        "id": "ms-6",
+        "label": "HMRC software",
+        "marks": 1
+      },
+      {
+        "id": "ms-7",
+        "label": "Other software",
+        "marks": 1
+      },
+      {
+        "id": "ms-8",
+        "label": "Tagging service",
+        "marks": 1
+      }
+    ],
+    "kit_page": "p.621",
+    "answer_page": "p.635",
+    "past_exam": "ACCA Specimen Exam (FA25)",
+    "exam_frequency_tag": "Official ACCA FA25 Specimen",
+    "examiner_debrief": {
+      "trap_category": "Cars & Fuel Benefits",
+      "trap_of_question": "Cars & Fuel Benefits: NAIVE LTD (a) Naive Ltd – Corporation tax computation for the year ended 31 March 2026",
+      "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
+      "examiner_playbook": "Corporation tax is payable at 25% as the taxable total profits exceed £250,000. Non-trade loan relationship income is taxable on the accruals basis and it is therefore the interest receivable rather than the interest paid which should be taxed. Workings (W1) T",
+      "speed_trick": "Compute % first (round CO2 DOWN to nearest 5, check RDE2, apply 37% cap), then list price × % × months/12 in one line.",
+      "twist_prediction": "Next sitting they could change the car to non-RDE2 diesel (+4%, max 37%) or shift availability to 6 October (6/12)."
+    },
+    "free_marks_items": [
+      "Indicate non-taxable / non-deductible items with explicit zero (0)"
+    ]
+  }
+]
