@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Layers, Lock, Sparkles, Unlock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Layers, Lock, Play, Sparkles, Unlock } from 'lucide-react';
 import { TOPICS } from '../data/taxReference';
 import { generateTrapVariant } from '../engine/taxCalculators';
 import type { AppState, KitQuestion, TopicDefinition } from '../types/tx';
@@ -50,6 +50,26 @@ export const TopicView: React.FC<TopicViewProps> = ({
     [allQuestions, topic.id]
   );
 
+  const tierCounts = useMemo(() => {
+    const secA = topicQuestions.filter((q) => q.section === 'A');
+    const secBC = topicQuestions.filter((q) => q.section === 'B' || q.section === 'C');
+    return {
+      1: Math.min(6, secA.length),
+      2: secA.length,
+      3: secBC.length,
+      4: 3,
+    };
+  }, [topicQuestions]);
+
+  // Prevent empty-tier dead-ends (e.g., Topics 20, 21, 24 only have Sec B/C questions)
+  useEffect(() => {
+    if (selectedTier !== 4 && tierCounts[selectedTier] === 0) {
+      if (tierCounts[2] > 0) setSelectedTier(2);
+      else if (tierCounts[3] > 0) setSelectedTier(3);
+      else setSelectedTier(4);
+    }
+  }, [topic.id, tierCounts, selectedTier]);
+
   const tierFiltered = useMemo(() => {
     if (selectedTier === 1) return topicQuestions.filter((q) => q.section === 'A').slice(0, 6);
     if (selectedTier === 2) return topicQuestions.filter((q) => q.section === 'A');
@@ -77,6 +97,11 @@ export const TopicView: React.FC<TopicViewProps> = ({
     () => topicQuestions.filter((q) => attemptCountByQ.has(q.id)).length,
     [topicQuestions, attemptCountByQ]
   );
+
+  const nextRecommendedQ = useMemo(() => {
+    const pool = tierFiltered.length > 0 ? tierFiltered : topicQuestions;
+    return pool.find((q) => !attemptCountByQ.has(q.id)) ?? pool[0] ?? null;
+  }, [tierFiltered, topicQuestions, attemptCountByQ]);
 
   return (
     <div className="space-y-6">
@@ -157,8 +182,30 @@ export const TopicView: React.FC<TopicViewProps> = ({
               {topic.title}
             </h1>
           </div>
-          <div className="font-mono text-xs font-semibold text-neutral-600 dark:text-neutral-300 tabular-nums">
-            Examined {topic.phase1.frequencyCount}/8 sittings · {topic.phase1.kitRefs}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="font-mono text-xs font-semibold text-neutral-600 dark:text-neutral-300 tabular-nums">
+              Examined {topic.phase1.frequencyCount}/8 sittings · {topic.phase1.kitRefs}
+            </div>
+            <div className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Previous topic"
+                disabled={topic.id <= 1}
+                onClick={() => topic.id > 1 && onSelectTopic(topic.id - 1)}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] text-neutral-700 hover:bg-[#EFECE4] disabled:opacity-40 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next topic"
+                disabled={topic.id >= TOPICS.length}
+                onClick={() => topic.id < TOPICS.length && onSelectTopic(topic.id + 1)}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] text-neutral-700 hover:bg-[#EFECE4] disabled:opacity-40 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -257,21 +304,38 @@ export const TopicView: React.FC<TopicViewProps> = ({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLaunchTier4Variant}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#14171A] px-4 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            Launch Tier-4 Trap Variant
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {nextRecommendedQ && (
+              <button
+                type="button"
+                onClick={() =>
+                  onLaunchQuestion(
+                    nextRecommendedQ,
+                    nextRecommendedQ.section === 'A' ? (selectedTier === 1 ? 1 : 2) : 3
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F5132] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
+              >
+                <Play className="h-3.5 w-3.5" />
+                Practice {nextRecommendedQ.id} →
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleLaunchTier4Variant}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#14171A] px-4 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800 dark:border dark:border-[#303846] dark:bg-[#1C222B] dark:hover:bg-[#242C38]"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              Launch Tier-4 Trap Variant
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { tier: 1 as const, label: 'Tier 1 · Foundation', desc: 'Single-rule Section A OTs' },
-            { tier: 2 as const, label: 'Tier 2 · Kit Sec A', desc: 'Full Section A OTs (2m each)' },
-            { tier: 3 as const, label: 'Tier 3 · Kit Sec B/C', desc: '10m OT cases & 10–15m CRs' },
+            { tier: 1 as const, label: 'Tier 1 · Foundation', desc: `Single-rule Sec A OTs (${tierCounts[1]})` },
+            { tier: 2 as const, label: 'Tier 2 · Kit Sec A', desc: `Full Sec A OTs (${tierCounts[2]})` },
+            { tier: 3 as const, label: 'Tier 3 · Kit Sec B/C', desc: `Cases & CRs (${tierCounts[3]})` },
             { tier: 4 as const, label: 'Tier 4 · Trap Variant', desc: 'FA25 trap-planted drill' },
           ].map((item) => {
             const active = selectedTier === item.tier;
@@ -290,12 +354,12 @@ export const TopicView: React.FC<TopicViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">{item.label}</span>
                   {isUnlocked ? (
-                    <Unlock className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" />
+                    <Unlock className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" aria-label="Tier mastered" />
                   ) : (
-                    <Lock className="h-3.5 w-3.5 text-neutral-400" />
+                    <Lock className="h-3.5 w-3.5 text-neutral-400" aria-label="Recommended after earlier tier (open for practice)" />
                   )}
                 </div>
-                <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{item.desc}</p>
+                <p className="mt-1 font-mono text-xs text-neutral-600 dark:text-neutral-400">{item.desc}</p>
               </button>
             );
           })}

@@ -306,6 +306,77 @@ export function calculateChattelGain(grossProceeds: number, cost: number): { cha
   return { chargeableGain: grossProceeds - cost, rule: 'Normal proceeds − cost' };
 }
 
+export interface CapitalAllowanceSimInput {
+  isCompany: boolean;
+  months: number;
+  mainPoolBf: number;
+  specialRateAddition: number;
+  mainPoolAddition: number;
+  carCost: number;
+  carTier: 'new_0g' | 'secondhand_0g' | '1_to_50g' | 'over_50g';
+}
+
+export function calculateCapitalAllowances2526(input: CapitalAllowanceSimInput) {
+  const m = Math.min(18, Math.max(1, Math.round(input.months)));
+  const aiaLimit = Math.round((1_000_000 * m) / 12);
+  let remainingAia = aiaLimit;
+
+  // 1. Allocate AIA to Special Rate expenditure FIRST
+  const srpAdd = Math.max(0, input.specialRateAddition);
+  const aiaOnSrp = Math.min(srpAdd, remainingAia);
+  remainingAia -= aiaOnSrp;
+  const srpAfterAia = srpAdd - aiaOnSrp;
+
+  // Companies qualify for 50% FYA on new special rate additions above AIA (never prorated; remaining 50% gets no WDA until next period)
+  const srpFya50 = input.isCompany && srpAfterAia > 0 ? Math.round(srpAfterAia * 0.5) : 0;
+  const srpDeferredNoWda = input.isCompany ? srpAfterAia - srpFya50 : 0;
+  const srpPoolForWda = input.isCompany ? 0 : srpAfterAia;
+
+  // 2. Main pool P&M additions: AIA then 100% Full Expensing (companies only)
+  const mainAdd = Math.max(0, input.mainPoolAddition);
+  const aiaOnMain = Math.min(mainAdd, remainingAia);
+  remainingAia -= aiaOnMain;
+  const mainAfterAia = mainAdd - aiaOnMain;
+  const mainFullExpensing = input.isCompany ? mainAfterAia : 0;
+  const mainPoolAddLeft = input.isCompany ? 0 : mainAfterAia;
+
+  // 3. Cars (never AIA, never Full Expensing; New 0g car gets 100% FYA unprorated)
+  const carCost = Math.max(0, input.carCost);
+  const carFya100 = input.carTier === 'new_0g' ? carCost : 0;
+  const carToMain = input.carTier === 'secondhand_0g' || input.carTier === '1_to_50g' ? carCost : 0;
+  const carToSrp = input.carTier === 'over_50g' ? carCost : 0;
+
+  // 4. Pools WDA (prorated by months/12; small pools threshold £1,000 prorated)
+  const smallPoolLimit = Math.round((1_000 * m) / 12);
+  const mainBase = Math.max(0, input.mainPoolBf) + mainPoolAddLeft + carToMain;
+  const mainSmallWriteOff = mainBase > 0 && mainBase <= smallPoolLimit;
+  const mainWda = mainSmallWriteOff ? mainBase : Math.round((mainBase * 0.18 * m) / 12);
+  const mainCf = mainBase - mainWda;
+
+  const srpBase = srpPoolForWda + carToSrp;
+  const srpSmallWriteOff = srpBase > 0 && srpBase <= smallPoolLimit;
+  const srpWda = srpSmallWriteOff ? srpBase : Math.round((srpBase * 0.06 * m) / 12);
+  const srpCf = srpBase - srpWda + srpDeferredNoWda;
+
+  const totalAllowances =
+    aiaOnSrp + aiaOnMain + srpFya50 + mainFullExpensing + carFya100 + mainWda + srpWda;
+
+  return {
+    aiaLimit,
+    aiaClaimed: aiaOnSrp + aiaOnMain,
+    srpFya50,
+    mainFullExpensing,
+    carFya100,
+    mainWda,
+    srpWda,
+    mainSmallWriteOff,
+    srpSmallWriteOff,
+    mainCf,
+    srpCf,
+    totalAllowances,
+  };
+}
+
 function buildRotatedMcq(
   correctText: string,
   distractors: { text: string; reason: string }[],

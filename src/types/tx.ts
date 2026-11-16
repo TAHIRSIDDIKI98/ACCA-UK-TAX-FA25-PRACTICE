@@ -1,3 +1,11 @@
+export type NavTab =
+  | 'overview'
+  | 'topics'
+  | 'player'
+  | 'mock'
+  | 'tables'
+  | 'mistakes';
+
 export type SectionType = 'A' | 'B' | 'C';
 export type QuestionType = 'mcq' | 'multi' | 'number' | 'case' | 'cr';
 export type InteractionType =

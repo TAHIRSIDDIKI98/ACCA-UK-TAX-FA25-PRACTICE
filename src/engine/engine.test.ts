@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   calculateAdjustedPersonalAllowance,
+  calculateCapitalAllowances2526,
   calculateCarAndFuelBenefit,
   calculateChattelGain,
   calculateCorporationTax,
@@ -30,7 +31,9 @@ import {
   buildMistakeDiagnosisPayload,
   parseAndValidateDrillResponse,
 } from './mistakeCoach';
+import { formatMarkSchemeLabel, parseScenarioSegments, parseWorkedSolutionBlocks } from './workedSolutionParser';
 import { TOPICS, CONFUSION_CLINIC_PAIRS } from '../data/taxReference';
+import { FA25_REVISION_MODULES, FA25_TIME_LIMIT_GROUPS } from '../data/fa25RevisionHub';
 import type { CaseSubQuestion, KitQuestion, MatrixOptions, McqOption, PairDropdownGroup } from '../types/tx';
 
 const questions: KitQuestion[] = JSON.parse(
@@ -342,8 +345,21 @@ test('All 306 Kit + 21 Specimen items pass structural integrity, matrix/dropdown
   const countsByTopic: Record<number, number> = {};
   for (const q of bank) {
     countsByTopic[q.topic_id] = (countsByTopic[q.topic_id] ?? 0) + 1;
+    assert.equal(q.title, q.title.trim(), `${q.id}: untrimmed whitespace in title`);
+    assert.ok(!/\|\s*$/.test(q.title), `${q.id}: trailing pipe artifact in title "${q.title}"`);
     assert.ok(q.full_worked_solution.trim().length >= 15, `${q.id}: worked solution too short`);
     assert.ok(!/Walk in the footsteps|W alk in the footsteps/i.test(q.examiner_debrief.trap_of_question), `${q.id}: noisy tutor boilerplate in trap_of_question`);
+    assert.ok(!/[\uF000-\uF0FF]/.test(q.examiner_debrief.trap_of_question + q.examiner_debrief.examiner_playbook + q.examiner_debrief.distractor_forensics), `${q.id}: Wingdings/PUA glyph leaked into examiner_debrief`);
+    assert.ok(!/[\uE000-\uF8FF]/.test(JSON.stringify(q)), `${q.id}: PUA/Wingdings glyph leaked into question payload`);
+    assert.ok(!/\b(?:which is|as follows)\s*$/i.test(q.examiner_debrief.trap_of_question) && !/:\s*$/.test(q.examiner_debrief.trap_of_question), `${q.id}: dangling incomplete ending in trap_of_question`);
+    assert.ok(!/Walk in the footsteps/i.test(q.title), `${q.id}: tutor banner leaked into title`);
+    assert.ok(!q.scenario.trim() || !/^[a-z]/.test(q.scenario.trim()), `${q.id}: scenario begins mid-sentence with lowercase`);
+    const reqTrim = q.requirement.trim();
+    assert.ok(reqTrim.length >= 10 && reqTrim !== '00' && !/^(?:ended 31|forward\?|202\d\/\d{2}\?)/i.test(reqTrim), `${q.id}: broken or split requirement "${reqTrim}"`);
+    assert.ok(!/^[A-Z0-9\s,&–-]{12,}$/.test(reqTrim), `${q.id}: requirement is an all-caps heading "${reqTrim}"`);
+    if (q.type !== 'cr') {
+      assert.ok(!reqTrim.includes('|'), `${q.id}: non-CR requirement still contains raw pipe table "${reqTrim}"`);
+    }
 
     if (q.examiner_debrief.trap_category === 'UK Residence') {
       assert.ok(q.topic_id === 3 || q.id === 'SPEC-Q15', `${q.id}: spurious UK Residence trap_category on topic ${q.topic_id}`);
@@ -519,3 +535,192 @@ test('Mistake Bank AI Coach helpers build payloads, offline FA25 diagnoses, and 
     /Invalid drill structure|Invalid correctKey/
   );
 });
+
+test('parseWorkedSolutionBlocks separates headings, aligned proforma tables with subtotal rules, and prose', () => {
+  const sample = [
+    'Requirement (a)',
+    '£',
+    'Salary | 30,000',
+    'Less: Personal allowance | (12,570)',
+    '––––––',
+    'Taxable income | 17,430',
+    '––––––',
+    'Tutorial note',
+    'Personal allowance is reduced when adjusted net income exceeds £100,000.',
+    'Working 1 – Car benefit',
+    'CO2 emissions round down to the nearest 5 g/km.',
+    'Examiner’s report',
+    'Candidates often forgot to apply the Diesel supplement.',
+  ].join('\n');
+
+  const blocks = parseWorkedSolutionBlocks(sample);
+  assert.equal(blocks[0].type, 'heading');
+  assert.equal(blocks[1].type, 'table');
+  if (blocks[1].type === 'table') {
+    assert.equal(blocks[1].rows.length, 4);
+    assert.deepEqual(blocks[1].rows[1].cells, ['Salary', '30,000']);
+    assert.equal(blocks[1].rows[2].ruleBelow, true);
+    assert.equal(blocks[1].rows[3].ruleBelow, true);
+  }
+  assert.deepEqual(blocks[2], { type: 'heading', text: 'Tutorial note' });
+  assert.equal(blocks[3].type, 'paragraph');
+  assert.deepEqual(blocks[4], { type: 'heading', text: 'Working 1 – Car benefit' });
+  assert.equal(blocks[5].type, 'paragraph');
+  assert.deepEqual(blocks[6], { type: 'heading', text: 'Examiner’s report' });
+  assert.equal(blocks[7].type, 'paragraph');
+
+  // Pipe-delimited dash rules across columns become borders rather than literal dash text rows
+  const pipeDashBlocks = parseWorkedSolutionBlocks(
+    'Pension income | 15,000 | 15,000\n------ | ------ | ------\nTotal income | 15,000 | 15,000'
+  );
+  assert.equal(pipeDashBlocks.length, 1);
+  if (pipeDashBlocks[0].type === 'table') {
+    assert.equal(pipeDashBlocks[0].rows.length, 2);
+    assert.equal(pipeDashBlocks[0].rows[0].ruleBelow, true);
+    assert.equal(pipeDashBlocks[0].rows[1].cells[0], 'Total income');
+  }
+
+  assert.equal(
+    formatMarkSchemeLabel('OT 5: Correct answer ({"0":["True"],"1":["False"],"2":["False"],"3":["True"]})'),
+    'OT 5: Correct answer (Row 1: True · Row 2: False · Row 3: False · Row 4: True)'
+  );
+  assert.equal(
+    formatMarkSchemeLabel('OT 2: Correct answer (["£0","£0","£990"])'),
+    'OT 2: Correct answer (£0 · £0 · £990)'
+  );
+  assert.equal(formatMarkSchemeLabel('OT 1: Correct answer (A)'), 'OT 1: Correct answer (A)');
+
+  // Tutor footer banners are stripped cleanly and % units + footnote digits behave properly
+  const q27Like = parseWorkedSolutionBlocks(
+    'PHILIP AND CHARLES (ADAPTED)  |  Walk in the footsteps of a top tutor\n%\nDiesel (RDE2) | 17\n1\nPlus: (150 - 55) / 5 | 19\n---\nAppropriate percentage | 36'
+  );
+  assert.equal(q27Like.length, 1);
+  if (q27Like[0].type === 'table') {
+    assert.deepEqual(q27Like[0].rows[0].cells, ['', '%']);
+    assert.ok(!q27Like[0].rows.some((r) => r.cells[0] === 'Total' && r.cells[1] === '1'));
+  }
+});
+
+test('Regression: repaired bank prompts & parseScenarioSegments unify £/dash exhibits and numbered notes', () => {
+  const bank = [...questions, ...specimen];
+  const q251 = bank.find((q) => q.id === 'Q251')!;
+  assert.ok(q251.requirement.includes('corporation tax'), 'Q251 requirement should contain question prompt');
+
+  const q297 = bank.find((q) => q.id === 'Q297')!;
+  const q297Ot5 = (q297.options as CaseSubQuestion[]).find((sq) => sq.sub_num === 5)!;
+  assert.ok(q297Ot5.prompt.startsWith('What is the amount of input VAT'), 'Q297 OT5 should have full restored opening');
+
+  const q162 = bank.find((q) => q.id === 'Q162')!;
+  const q162Ot2 = (q162.options as CaseSubQuestion[]).find((sq) => sq.sub_num === 2)!;
+  assert.ok(!q162Ot2.prompt.includes('|'), 'Q162 OT2 should not contain stray pipe artifact');
+
+  const exhibitSegs = parseScenarioSegments([
+    'Year ended 31 March 2026',
+    '£',
+    'Trading profit | 100,000',
+    'Less: Loss b/f | (20,000)',
+    '–––––––',
+    'Taxable total profits | 80,000',
+    '–––––––',
+  ].join('\n'));
+  assert.equal(exhibitSegs.length, 2);
+  assert.equal(exhibitSegs[0].type, 'prose');
+  assert.equal(exhibitSegs[1].type, 'table');
+  if (exhibitSegs[1].type === 'table') {
+    assert.deepEqual(exhibitSegs[1].rows[0].cells, ['£']);
+    assert.equal(exhibitSegs[1].rows[2].ruleBelow, true);
+    assert.equal(exhibitSegs[1].rows[3].ruleBelow, true);
+  }
+
+  const noteSegs = parseScenarioSegments(
+    '1 | During the tax year 2025/26, Simon was paid a gross annual salary of £24,700.\n2 | He received a car.'
+  );
+  assert.equal(noteSegs.length, 1);
+  assert.equal(noteSegs[0].type, 'table');
+  if (noteSegs[0].type === 'table') {
+    assert.equal(noteSegs[0].rows.length, 2);
+    assert.equal(noteSegs[0].rows[0].cells[0], '1');
+  }
+});
+
+test('FA25 Revision Hub modules & statutory time limits include complete rates, matrices, examples & clean copy', () => {
+  assert.equal(FA25_REVISION_MODULES.length, 9);
+  const validTopicIds = new Set(TOPICS.map((t) => t.id));
+  for (const mod of FA25_REVISION_MODULES) {
+    assert.ok(validTopicIds.has(mod.relatedTopicId), `${mod.id}: invalid relatedTopicId ${mod.relatedTopicId}`);
+    assert.ok(mod.rates.length >= 4, `${mod.id}: needs detailed rates/thresholds`);
+    assert.ok(mod.workedExamples.length >= 1, `${mod.id}: must include worked numerical example`);
+    assert.ok(mod.examTraps.length >= 2, `${mod.id}: must include examiner traps`);
+    for (const ex of mod.workedExamples) {
+      assert.ok(ex.steps.length >= 3, `${ex.title}: needs step-by-step workings`);
+      assert.ok(ex.answer.trim().length > 4, `${ex.title}: missing numerical answer`);
+      assert.ok(!/\bWait:|verify per ST/i.test(JSON.stringify(ex)), `${ex.title}: draft text found`);
+    }
+  }
+
+  const resMod = FA25_REVISION_MODULES.find((m) => m.id === 'residence-benefits')!;
+  assert.equal(resMod.matrices?.[0].rows.length, 6, 'Residence Status table must have all 6 day brackets');
+
+  const vatMod = FA25_REVISION_MODULES.find((m) => m.id === 'vat-penalties')!;
+  assert.equal(vatMod.matrices?.[0].rows.length, 3, 'Error Penalties table must have all 3 behaviour tiers');
+
+  assert.equal(FA25_TIME_LIMIT_GROUPS.length, 3);
+  const allDeadlines = FA25_TIME_LIMIT_GROUPS.flatMap((g) => g.items);
+  assert.ok(allDeadlines.length >= 18);
+  assert.ok(allDeadlines.some((d) => d.example2526.includes('4y Normal')));
+});
+
+test('calculateCapitalAllowances2526 handles 9m short AP, 50% SRP FYA (no same-year WDA), Full Expensing & Sole Trader small pools', () => {
+  // Company 9m short AP: £750k prorated AIA on £800k SRP -> £50k excess gets £25k unprorated 50% FYA; deferred £25k earns 0 same-year WDA.
+  // Main pool b/f £40,000 -> £40k * 18% * 9/12 = £5,400. Petrol car >50g (£18,000) -> £18k * 6% * 9/12 = £810.
+  const co9m = calculateCapitalAllowances2526({
+    isCompany: true,
+    months: 9,
+    mainPoolBf: 40_000,
+    specialRateAddition: 800_000,
+    mainPoolAddition: 0,
+    carCost: 18_000,
+    carTier: 'over_50g',
+  });
+  assert.equal(co9m.aiaLimit, 750_000);
+  assert.equal(co9m.aiaClaimed, 750_000);
+  assert.equal(co9m.srpFya50, 25_000);
+  assert.equal(co9m.mainWda, 5_400);
+  assert.equal(co9m.srpWda, 810);
+  assert.equal(co9m.totalAllowances, 781_210);
+  assert.equal(co9m.srpCf, 42_190);
+
+  // Company 12m: AIA covers first £1,000,000, Full Expensing 100% covers remaining £100,000 new main P&M + 100% FYA on new 0g car
+  const coFe = calculateCapitalAllowances2526({
+    isCompany: true,
+    months: 12,
+    mainPoolBf: 0,
+    specialRateAddition: 0,
+    mainPoolAddition: 1_100_000,
+    carCost: 30_000,
+    carTier: 'new_0g',
+  });
+  assert.equal(coFe.aiaClaimed, 1_000_000);
+  assert.equal(coFe.mainFullExpensing, 100_000);
+  assert.equal(coFe.carFya100, 30_000);
+  assert.equal(coFe.totalAllowances, 1_130_000);
+
+  // Sole Trader 12m: No FE / no 50% FYA; Main pool £900 qualifies for £1,000 Small Pools full write-off
+  const sole = calculateCapitalAllowances2526({
+    isCompany: false,
+    months: 12,
+    mainPoolBf: 900,
+    specialRateAddition: 1_050_000,
+    mainPoolAddition: 0,
+    carCost: 0,
+    carTier: 'new_0g',
+  });
+  assert.equal(sole.srpFya50, 0);
+  assert.equal(sole.aiaClaimed, 1_000_000);
+  assert.equal(sole.mainSmallWriteOff, true);
+  assert.equal(sole.mainWda, 900);
+  assert.equal(sole.mainCf, 0);
+  assert.equal(sole.srpWda, 3_000); // 6% * £50,000 excess
+});
+
+

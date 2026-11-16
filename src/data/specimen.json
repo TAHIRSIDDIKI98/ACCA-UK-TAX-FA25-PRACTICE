@@ -45,7 +45,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "National Insurance",
-      "trap_of_question": "National Insurance: Class 4 | £ £37,700 (£50,270 – £12,570) × 6% | 2,262",
+      "trap_of_question": "National Insurance: £37,700 (£50,270 – £12,570) × 6%: 2,262; £32,430 (£82,700 – £50,270) × 2%: 649",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
       "speed_trick": "NIC ignores pension deductions; cash vouchers = Class 1 (8%/2% Ee, 15% Er >£5k); non-cash benefits = 15% Class 1A; Class 4 = 6%/2%.",
@@ -102,7 +102,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "UK Tax System & Ethics",
-      "trap_of_question": "UK Tax System & Ethics: 1 and 2",
+      "trap_of_question": "UK Tax System & Ethics: 1 and 2 — Where a client refuses to disclose omitted income to HMRC, the firm must advise the client to make full disclosure and report internally under the Money Laundering Regulations (to the MLRO).",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
       "speed_trick": "MLRO flow: Advise disclosure -> Cease acting -> Internal MLRO report -> NEVER tell HMRC or tip off the client.",
@@ -139,7 +139,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "PA Taper & ANI",
-      "trap_of_question": "PA Taper & ANI: £ Personal allowance | 12,570",
+      "trap_of_question": "PA Taper & ANI: Personal allowance: 12,570; Restriction (£111,100 – £800 – £100,000 = £10,300/2): (5,150)",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
       "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS PPC; every £2 over £100k cuts £1 PA; NRBs consume basic rate band.",
@@ -193,7 +193,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Groups of Companies",
-      "trap_of_question": "Groups of Companies: Maximum loss relief = Lower of: | £ (£180,000 × 9/12) | 135,000",
+      "trap_of_question": "Groups of Companies: Where companies do not have coterminous (matching) year ends, the available profits and losses must be time apportioned, to find the relevant amounts falling within the corresponding accounting period.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Where companies do not have coterminous (matching) year ends, the available profits and losses must be time apportioned, to find the relevant amounts falling within the corresponding accounting period.",
       "speed_trick": "Associated companies (>50%) split £50k/£250k/£1.5m; Group Relief needs 75% + overlap pro-rating; Gains Group needs 75% each link + >50% effective.",
@@ -247,9 +247,9 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Company Tax Admin",
-      "trap_of_question": "Company Tax Admin: (£970,000 × 25%)/4 = £60,625 The profit threshold is shared between associated companies, in this case two. Sizeable Ltd",
+      "trap_of_question": "Company Tax Admin: The profit threshold is shared between associated companies, in this case two. Sizeable Ltd exceeded the threshold of £750,000 (£1,500,000/2) in the current and the previous period.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
-      "examiner_playbook": "The profit threshold is shared between associated companies, in this case two. Sizeable Ltd exceeded the threshold of £750,000 (£1,500,000/2) in the current and the previous period. As this is not the first period that Sizeable Ltd is a large company, the corp",
+      "examiner_playbook": "The profit threshold is shared between associated companies, in this case two. Sizeable Ltd exceeded the threshold of £750,000 (£1,500,000/2) in the current and the previous period.",
       "speed_trick": "Small/medium pays 9m+1d after AP end; Large (>£1.5m/(1+assoc)) pays 4 QIPs (M7/10/13/16 day 14) subject to 1-yr grace rule; records = 6 yrs.",
       "twist_prediction": "Next sitting they could test short-period QIP dates (final instalment 14th of month 4 after AP end) or iXBRL filing options."
     },
@@ -266,7 +266,7 @@
     "type": "mcq",
     "interaction": "single_mcq",
     "marks": 2,
-    "scenario": "which it did not pay until 31 March 2027. Lateness Ltd is not a large company.",
+    "scenario": "For the year ended 31 December 2025, Lateness Ltd had a corporation tax liability of £60,000,\nwhich it did not pay until 31 March 2027. Lateness Ltd is not a large company.",
     "requirement": "How much interest will Lateness Ltd be charged by HM Revenue & Customs (HMRC) in respect of the late payment of its corporation tax liability for the year ended 31 December 2025?",
     "options": [
       {
@@ -301,7 +301,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Company Tax Admin",
-      "trap_of_question": "Company Tax Admin: £60,000 × 8.5% × 6/12 = £2,550 (period 1 October 2026 to 31 March 2027) As Lateness Ltd is not a large company, the corporation tax would have been due 9 months",
+      "trap_of_question": "Company Tax Admin: £60,000 × 8.5% × 6/12 = £2,550 (period 1 October 2026 to 31 March 2027)",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "As Lateness Ltd is not a large company, the corporation tax would have been due 9 months and 1 day after the end of the accounting period (1 October 2026).",
       "speed_trick": "Small/medium pays 9m+1d after AP end; Large (>£1.5m/(1+assoc)) pays 4 QIPs (M7/10/13/16 day 14) subject to 1-yr grace rule; records = 6 yrs.",
@@ -357,7 +357,7 @@
       "trap_category": "CGT Losses & Matching",
       "trap_of_question": "CGT Losses & Matching: £2,700 (£8,700 – £6,000) × 5/3 = £4,500 This is less than £4,900 (£8,700 – £3,800).",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
-      "examiner_playbook": "The chattels rules apply to the disposal of the antique table. The gross proceeds are ˃£6,000 and the cost is ≤£6,000 therefore the treatment is as follows: The gain is calculated as normal i.e. Proceeds – cost The gain must not exceed the maximum amount of 5/",
+      "examiner_playbook": "The chattels rules apply to the disposal of the antique table. The gross proceeds are ˃£6,000 and the cost is ≤£6,000 therefore the treatment is as follows: The gain is calculated as normal i.e. Proceeds – cost The gain must not exceed the maximum amount of 5/3 ×…",
       "speed_trick": "Chattels cost ≤£6k & sold >£6k cap gain at 5/3 × (GP − £6,000); PRR last 9 months exempt; Letting relief needs shared occupation.",
       "twist_prediction": "Next sitting they could test an antique/painting disposal vs a wasting chattel (≤50 yrs exempt unless CAs claimed)."
     },
@@ -392,7 +392,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Inheritance Tax",
-      "trap_of_question": "Inheritance Tax: £ Chargeable amount | 800,000",
+      "trap_of_question": "Inheritance Tax: Chargeable amount: 800,000; Nil rate band available at the date of the gift: (325,000)",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
       "speed_trick": "PET = £0 lifetime tax; CLT donor pays = 25% gross-up; Taper cuts TAX (not value) after 3 yrs; Death life policy = full proceeds; RNRB direct descendants.",
@@ -507,7 +507,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "VAT Compliance & FRS",
-      "trap_of_question": "VAT Compliance & FRS: £49,750 × 120/100 at 12% = £7,164 The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
+      "trap_of_question": "VAT Compliance & FRS: The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The flat rate percentage is applied to total turnover, inclusive of VAT where applicable.",
       "speed_trick": "Flat Rate % hits VAT-INCLUSIVE total turnover (incl. exempt); 4 submission penalty points = £200; Pay penalties 0% ≤15d / 3% 16–30d / 6% >30d.",
@@ -564,7 +564,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "CGT Losses & Matching",
-      "trap_of_question": "CGT Losses & Matching: 1 and 3",
+      "trap_of_question": "CGT Losses & Matching: 1 and 3 — A car suitable for private use and UK Government securities (gilts) are always exempt assets for capital gains tax purposes.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
       "speed_trick": "Chattels cost ≤£6k & sold >£6k cap gain at 5/3 × (GP − £6,000); PRR last 9 months exempt; Letting relief needs shared occupation.",
@@ -618,7 +618,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Savings & Dividend Bands",
-      "trap_of_question": "Savings & Dividend Bands: £20,000 – £8,000 = £12,000 The overall ISA investment limit for the tax year 2025/26 is £20,000.",
+      "trap_of_question": "Savings & Dividend Bands: The overall ISA investment limit for the tax year 2025/26 is £20,000.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "The overall ISA investment limit for the tax year 2025/26 is £20,000.",
       "speed_trick": "ANI = Net income − GROSS Gift Aid − GROSS PPC; every £2 over £100k cuts £1 PA; NRBs consume basic rate band.",
@@ -671,7 +671,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "SA Tax Admin & Records",
-      "trap_of_question": "SA Tax Admin & Records: 31 January 2032 and 31 January 2032 Taxpayers with a business must retain all of their records (not just business records), until",
+      "trap_of_question": "SA Tax Admin & Records: 31 January 2032 and 31 January 2032",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Taxpayers with a business must retain all of their records (not just business records), until 5 years from the 31 January filing date.",
       "speed_trick": "POAs = 50% prior IT + Class 4 (no CGT); 5% late penalties hit balancing payment only; business/property keeps ALL records 5 yrs (31 Jan 2032).",
@@ -725,7 +725,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Company Losses",
-      "trap_of_question": "Company Losses: The maximum loss relief is the lower of: • | Remaining loss: £62,000 (£105,000 – £43,000)",
+      "trap_of_question": "Company Losses: The maximum loss relief is the lower of: •: Remaining loss: £62,000 (£105,000 – £43,000)",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
       "speed_trick": "Company CY/12m CB is all-or-nothing before QCDs (must claim CY before CB); brought-forward trading losses CAN be restricted to preserve QCDs.",
@@ -984,9 +984,9 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "CGT Losses & Matching",
-      "trap_of_question": "CGT Losses & Matching: OT 1 (Q16): Capital gains tax liability – 2025/26",
+      "trap_of_question": "CGT Losses & Matching: Capital gains tax liability – 2025/26",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
-      "examiner_playbook": "Delroy would have been able to claim business asset disposal relief (BADR) on disposal of the shares, as he was an employee and held at least 5% of the shares for at least 2 years prior to disposal. However, Grant is not eligible for BADR, as he was not an emp",
+      "examiner_playbook": "Delroy would have been able to claim business asset disposal relief (BADR) on disposal of the shares, as he was an employee and held at least 5% of the shares for at least 2 years prior to disposal.",
       "speed_trick": "Offset CY capital losses BEFORE £3,000 AEA, and restrict b/f capital losses AFTER AEA; BADR (14%) consumes basic rate band first.",
       "twist_prediction": "Next sitting they could combine residential property + shares at 18%/24% or test connected-party market value substitution."
     },
@@ -1198,9 +1198,9 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Inheritance Tax",
-      "trap_of_question": "Inheritance Tax: OT 1 (Q21): £",
+      "trap_of_question": "Inheritance Tax: Repayment and interest only mortgages should be deducted from the value of the property in the death estate.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
-      "examiner_playbook": "Repayment and interest only mortgages should be deducted from the value of the property in the death estate. An insurance policy on the life of the deceased should be included in the death estate at the proceeds received not the market value while they are ali",
+      "examiner_playbook": "Repayment and interest only mortgages should be deducted from the value of the property in the death estate. An insurance policy on the life of the deceased should be included in the death estate at the proceeds received not the market value while they are alive.",
       "speed_trick": "PET = £0 lifetime tax; CLT donor pays = 25% gross-up; Taper cuts TAX (not value) after 3 yrs; Death life policy = full proceeds; RNRB direct descendants.",
       "twist_prediction": "Next sitting they could include multiple small gifts to the same grandchild (>£250 invalidates ALL for that person) or transferable spouse NRB %."
     },
@@ -1255,7 +1255,7 @@
         "marks": 2,
         "type": "multi",
         "interaction": "pair_dropdown",
-        "prompt": "Calculate the amounts required to complete the following sentence:\nGlacier Ltd will include output VAT of £  |  and input VAT of\n£  |  on its VAT return for the quarter ended 31 March 2026 in\nrespect of the managing director’s company car.\nSelect the amounts Glacier Ltd will include on its VAT return for the quarter ended 31 March 2026 for output VAT and input VAT on the company car fuel.",
+        "prompt": "Calculate the amounts required to complete the following sentence:\nGlacier Ltd will include output VAT of £[___] and input VAT of £[___] on its VAT return for the quarter ended 31 March 2026 in\nrespect of the managing director’s company car.\nSelect the amounts Glacier Ltd will include on its VAT return for the quarter ended 31 March 2026 for output VAT and input VAT on the company car fuel.",
         "options": [
           {
             "group": "Output VAT (£)",
@@ -1412,9 +1412,9 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "VAT Compliance & FRS",
-      "trap_of_question": "VAT Compliance & FRS: OT 1 (Q26): (£9,400 (£44,600 – £35,200) × 20%) + £1,600 = £3,480",
+      "trap_of_question": "VAT Compliance & FRS: The basic tax point for a supply of services is the date when they are completed, but if a VAT invoice is issued or payment received before the basic tax point, then this becomes the actual tax point.",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
-      "examiner_playbook": "The basic tax point for a supply of services is the date when they are completed, but if a VAT invoice is issued or payment received before the basic tax point, then this becomes the actual tax point. Therefore, the tax point for the additional contract is whe",
+      "examiner_playbook": "The basic tax point for a supply of services is the date when they are completed, but if a VAT invoice is issued or payment received before the basic tax point, then this becomes the actual tax point.",
       "speed_trick": "Historic £90k: notify 30 days from month end, charge from 1st day of 2nd month after; Bad debt relief = 6m from DUE date; Overseas entertaining recoverable.",
       "twist_prediction": "Next sitting they could test pre-registration input VAT limits (4 yrs goods on hand vs 6 months services) or deposit tax point."
     },
@@ -1472,7 +1472,7 @@
     "exam_frequency_tag": "Official ACCA FA25 Specimen",
     "examiner_debrief": {
       "trap_category": "Corporation Tax",
-      "trap_of_question": "Corporation Tax: SARAH The total tax and NIC cost if Sarah incorporates her business is £12,549 (£4,317 (W1) + £1,394",
+      "trap_of_question": "Corporation Tax: SARAH The total tax and NIC cost if Sarah incorporates her business is £12,549 (£4,317 (W1) + £1,394 (W2) + £3,750 (W2) + £3,088 (W3)).",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
       "examiner_playbook": "Circle every date, net/gross qualifier, and tax-year label before running the proforma computation.",
       "speed_trick": "Augmented profits = TTP + non-associated exempt dividends; divide £50k/£250k/£1.5m by (1 + associates) and × months/12.",
@@ -1543,7 +1543,7 @@
       "trap_category": "Cars & Fuel Benefits",
       "trap_of_question": "Cars & Fuel Benefits: SIMON (a) Simon – Taxable income 2025/26",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
-      "examiner_playbook": "The property was purchased more than six years before first being provided, so the benefit is based on the market value when first provided. (W2) Trading profit 1 | Simon’s share of the partnership’s trading profit for the period ended 31 March 2026 is £11,190",
+      "examiner_playbook": "The property was purchased more than six years before first being provided, so the benefit is based on the market value when first provided.",
       "speed_trick": "Always use LIST PRICE (not paid), round CO2 DOWN to nearest 5, waive +4% if RDE2-compliant, and time-apportion months/12.",
       "twist_prediction": "Next sitting they could insert a partial private-fuel contribution (0% reduction on fuel charge) or the >6-year MV accommodation rule."
     },
@@ -1619,7 +1619,7 @@
       "trap_category": "Corporation Tax",
       "trap_of_question": "Corporation Tax: NAIVE LTD (a) Naive Ltd – Corporation tax computation for the year ended 31 March 2026",
       "distractor_forensics": "Compare each distractor against omitting one statutory condition (e.g. grossing up net figures, part-year time apportionment, or RDE2/band thresholds).",
-      "examiner_playbook": "Corporation tax is payable at 25% as the taxable total profits exceed £250,000. Non-trade loan relationship income is taxable on the accruals basis and it is therefore the interest receivable rather than the interest paid which should be taxed. Workings (W1) T",
+      "examiner_playbook": "Corporation tax is payable at 25% as the taxable total profits exceed £250,000. Non-trade loan relationship income is taxable on the accruals basis and it is therefore the interest receivable rather than the interest paid which should be taxed.",
       "speed_trick": "Augmented profits = TTP + non-associated exempt dividends; divide £50k/£250k/£1.5m by (1 + associates) and × months/12.",
       "twist_prediction": "Next sitting they could include a long period of account (>12m) requiring a 12m + remainder split or marginal relief 3/200 calculation."
     },

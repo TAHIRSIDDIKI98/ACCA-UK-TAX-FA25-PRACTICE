@@ -6,6 +6,7 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 import { SEED_TRAP_LIBRARY } from '../data/taxReference';
 import {
@@ -215,8 +216,18 @@ export const TrapLedgerDashboard: React.FC<TrapLedgerDashboardProps> = ({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Filter trap category or Q#..."
-                  className="w-full rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] py-1.5 pl-8 pr-3 text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                  className="w-full rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] py-1.5 pl-8 pr-8 text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
                 />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    aria-label="Clear trap filter"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2 top-1.5 rounded p-0.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             )}
           </div>

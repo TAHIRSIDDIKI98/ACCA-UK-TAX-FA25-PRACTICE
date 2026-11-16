@@ -10,7 +10,13 @@ const data = new Uint8Array(fs.readFileSync(PDF_PATH));
 const doc = await pdfjs.getDocument({ data, verbosity: 0 }).promise;
 
 function cleanText(s) {
-  return s.replace(/\s+/g, ' ').replace(/\u00a0/g, ' ').trim();
+  return s
+    .replace(/[\uF050\uF0FC]/g, '✓')
+    .replace(/\uF020/g, '—')
+    .replace(/[\uF03A\uF08F]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .trim();
 }
 
 function isRunningHeaderOrFooter(line, bookPage) {
@@ -1072,11 +1078,47 @@ function parseSectionAOt(qObj, aObj, overrideKey = null) {
   };
 }
 
+function stripDebriefGlyphs(s) {
+  return String(s || '')
+    .replace(/[\uF000-\uF0FF]/g, '')
+    .replace(/[–—-]{3,}/g, ' ')
+    .replace(/\s*\|\s*/g, ' | ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function smartTruncateDebrief(raw, maxLen) {
+  const s = stripDebriefGlyphs(raw)
+    .replace(/^[|\s:;\-–]+/, '')
+    .replace(/[|\s]+$/, '')
+    .trim();
+  if (!s) return '';
+  if (s.length <= maxLen) return s;
+  const head = s.slice(0, maxLen);
+  const re = /(?<!\bs)(?<!\d)(?<!Ltd)(?<!plc)(?<!e\.g)(?<!i\.e)[.!?](?=\s|$)/gi;
+  let lastSentenceEnd = -1;
+  let m;
+  while ((m = re.exec(head)) !== null) {
+    if (m.index >= Math.floor(maxLen * 0.42)) lastSentenceEnd = m.index + 1;
+  }
+  if (lastSentenceEnd > 0) return head.slice(0, lastSentenceEnd).trim();
+  let cut = head.lastIndexOf(' ', maxLen - 1);
+  if (cut < Math.floor(maxLen * 0.4)) cut = maxLen - 1;
+  const chunk = head
+    .slice(0, cut)
+    .trim()
+    .replace(/[,;:\-–(|]+$/, '')
+    .trim()
+    .replace(/\s+(?:and|or|the|a|an|of|to|for|in|on|with|as|by|at|that|which)$/i, '')
+    .trim();
+  return chunk ? chunk + '…' : head.slice(0, maxLen - 1) + '…';
+}
+
 function buildExaminerDebrief(qNum, topicObj, pastExam, qText, aText, correctAns) {
-  const exMatch = aText.match(/Examiner[’']s report\s*([\s\S]*?)(?:Tutorial note|Tutor[’']s top tips|$)/i);
+  const exMatch = aText.match(/Examiner[’']s report\s*([\s\S]*?)(?:Tutorial note|Tutor[’']s top tips|Key answer tips|$)/i);
   const tutMatch = aText.match(/(?:Tutorial note|Tutor[’']s top tips|Key answer tips)\s*([\s\S]*?)(?:Examiner[’']s report|$)/i);
-  const exSnippet = exMatch ? cleanText(exMatch[1]).slice(0, 260) : '';
-  const tutSnippet = tutMatch ? cleanText(tutMatch[1]).slice(0, 260) : '';
+  const exSnippet = exMatch ? smartTruncateDebrief(exMatch[1], 270) : '';
+  const tutSnippet = tutMatch ? smartTruncateDebrief(tutMatch[1], 270) : '';
 
   const tLow = (qText + ' ' + aText).toLowerCase();
   let trapCategory = topicObj.topic;
@@ -1133,23 +1175,50 @@ function buildExaminerDebrief(qNum, topicObj, pastExam, qText, aText, correctAns
     twistPrediction = 'Next sitting they could test 6-month bad debt wait from PAYMENT DUE DATE or overseas entertaining (recoverable) vs UK customer entertaining (blocked).';
   }
 
-  // Derive crisp rule summary from the first 1-2 explanation sentences of the solution
-  const solLines = aText
-    .split('\n')
-    .map((l) => cleanText(l))
-    .filter(
-      (l) =>
-        l &&
-        !/^(Examiner[’']s report|Tutorial note|Tutor[’']s top tips|Key answer tips)/i.test(l) &&
-        !/^[A-F](?:\s*,\s*[A-F])*$/.test(l) &&
-        !/^£?[\d,]+$/.test(l)
-    );
-  const explanationLead = solLines.slice(0, 2).join(' ').slice(0, 210);
+  // Derive crisp complete-sentence rule summary without raw table headers or Wingdings glyphs
+  const isNoise = (line) =>
+    !line ||
+    /^[–—\-_=|\s£$%.,0-9()+/]+$/.test(line) ||
+    /^(?:[A-F](?:\s*,\s*[A-F])*|[0-9]+(?:\s*(?:,|and)\s*[0-9]+)*)$/i.test(line) ||
+    /^(?:£\s*\|\s*£|£|Taxable\s*\|\s*Exempt|Satisfies\s*\|\s*Does not satisfy|Deductible\s*\|\s*Not deductible|Walk in the footsteps.*|Key answer tips|Tutorial note|Tutor[’']s top tips|Examiner[’']s report)$/i.test(line) ||
+    /^(?:Requirement\s*\(?[a-z0-9]+\)?|Working\s*\d+|Answer|Proforma)$/i.test(line);
+
+  const rawLines = aText.split('\n').map((l) => stripDebriefGlyphs(l));
+  const paragraphs = [];
+  let cur = [];
+  for (const l of rawLines) {
+    if (!l || l.includes('|') || isNoise(l)) {
+      if (cur.length) {
+        paragraphs.push(cur.join(' ').replace(/\s+/g, ' ').trim());
+        cur = [];
+      }
+      continue;
+    }
+    cur.push(l);
+  }
+  if (cur.length) paragraphs.push(cur.join(' ').replace(/\s+/g, ' ').trim());
+
+  const calcRows = rawLines
+    .filter((l) => l && !isNoise(l) && !/\|\s*£\s*$/.test(l) && !/^\s*£\s*\|/.test(l))
+    .map((l) => l.replace(/\s*\|\s*/g, ': ').replace(/:\s*$/g, '').trim())
+    .filter((l) => l.length > 8 && /[a-z0-9]{2,}/i.test(l) && !/:\s*$/.test(l));
+
+  const completePara = paragraphs.find(
+    (p) => p.length >= 35 && /^[A-Z£0-9]/.test(p) && /[a-z]{4,}/i.test(p) && !/:\s*$/.test(p) && !/^\(?[\d,]+\)?$/.test(p)
+  );
+  const introPara = paragraphs.find((p) => p.length >= 25 && /^[A-Z£0-9]/.test(p) && /[a-z]{4,}/i.test(p));
+  const explanationLead = completePara
+    ? smartTruncateDebrief(completePara, 210)
+    : introPara && calcRows.length > 0
+      ? smartTruncateDebrief(`${introPara} ${calcRows.find((r) => !introPara.includes(r)) || calcRows[0]}`, 215)
+      : calcRows.length > 0
+        ? smartTruncateDebrief(calcRows.slice(0, 2).join('; '), 210)
+        : '';
 
   return {
     trap_category: trapCategory,
     trap_of_question: explanationLead
-      ? `${trapCategory}: ${explanationLead}${explanationLead.length >= 210 ? '…' : ''}`
+      ? `${trapCategory}: ${explanationLead}`
       : `Kit Q${qNum} (${pastExam || topicObj.topic}): verify statutory conditions & tax-year dates for ${typeof correctAns === 'string' ? correctAns : JSON.stringify(correctAns)}.`,
     distractor_forensics:
       exSnippet ||

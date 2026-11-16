@@ -127,6 +127,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
             <button
               type="button"
+              aria-expanded={showBattleCard}
               onClick={() => setShowBattleCard((v) => !v)}
               className="rounded-lg px-3 py-2 text-xs font-semibold text-neutral-600 hover:bg-[#EFECE4] hover:text-[#14171A] dark:text-neutral-300 dark:hover:bg-[#1C222B]"
             >
@@ -292,6 +293,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </span>
                     <button
                       type="button"
+                      aria-expanded={isExpanded}
                       onClick={() => setExpandedArea(isExpanded ? null : head.area)}
                       className="font-semibold text-[#14171A] hover:underline dark:text-neutral-200"
                     >
@@ -448,6 +450,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
           <button
             type="button"
+            aria-expanded={showCoverageTable}
             onClick={() => setShowCoverageTable((v) => !v)}
             className="text-xs font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
           >

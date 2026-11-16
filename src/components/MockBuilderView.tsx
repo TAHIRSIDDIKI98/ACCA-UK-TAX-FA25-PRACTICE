@@ -25,6 +25,7 @@ import {
   type UserQuestionAnswer,
 } from '../engine/scoring';
 import { getProformaTemplateForTopic } from '../engine/taxCalculators';
+import { formatMarkSchemeLabel } from '../engine/workedSolutionParser';
 import type {
   AppState,
   CaseSubQuestion,
@@ -38,6 +39,7 @@ import type {
 import { ScenarioText } from './ScenarioText';
 import { TaxCalculatorPad } from './TaxCalculatorPad';
 import { TaxTablesDrawer } from './TaxTablesView';
+import { WorkedSolutionBlock } from './WorkedSolutionBlock';
 
 const ACTIVE_MOCK_STORAGE_KEY = 'tx_mastercoach_active_mock_v1';
 
@@ -46,6 +48,7 @@ interface SavedActiveMock {
   currentIdx: number;
   answers: Record<string, UserQuestionAnswer>;
   flagged: Record<string, boolean>;
+  crScratchPads?: Record<string, string>;
   secondsLeft: number;
   savedIso: string;
 }
@@ -166,6 +169,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
   const [customIncludeC, setCustomIncludeC] = useState<boolean>(true);
   const [customPrioritizeUnseen, setCustomPrioritizeUnseen] = useState<boolean>(true);
   const [reportFilter, setReportFilter] = useState<'all' | 'missed' | 'cr'>('all');
+  const [navFilter, setNavFilter] = useState<'all' | 'unanswered' | 'flagged'>('all');
 
   // Written-Answer Clinic state
   const [theoryIdx, setTheoryIdx] = useState(0);
@@ -212,6 +216,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
     setCrSyncedToMastery(false);
     setAutoSyncedCount(0);
     setReportFilter('all');
+    setNavFilter('all');
     setSecondsLeft(nextPaper.budgetSeconds);
     setSubView('running');
   };
@@ -302,12 +307,13 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
     setCurrentIdx(Math.min(savedMock.currentIdx, Math.max(0, savedMock.paper.items.length - 1)));
     setAnswers(savedMock.answers ?? {});
     setFlagged(savedMock.flagged ?? {});
-    setSecondsLeft(savedMock.secondsLeft ?? savedMock.paper.budgetSeconds);
+    setCrScratchPads(savedMock.crScratchPads ?? {});
     setCrSelfMarks({});
     setCrStepChecks({});
     setCrSyncedToMastery(false);
     setAutoSyncedCount(0);
     setReportFilter('all');
+    setSecondsLeft(savedMock.secondsLeft ?? savedMock.paper.budgetSeconds);
     setSubView('running');
   };
 
@@ -336,12 +342,19 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
   }, [subView]);
 
   useEffect(() => {
+    if (subView === 'running' && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentIdx, subView]);
+
+  useEffect(() => {
     if (subView !== 'running' || !paper) return;
     const payload: SavedActiveMock = {
       paper,
       currentIdx,
       answers,
       flagged,
+      crScratchPads,
       secondsLeft,
       savedIso: new Date().toISOString(),
     };
@@ -351,7 +364,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
     } catch {
       // Ignore storage quota errors
     }
-  }, [subView, paper, currentIdx, answers, flagged, secondsLeft]);
+  }, [subView, paper, currentIdx, answers, flagged, crScratchPads, secondsLeft]);
 
   const customPreviewTotals = useMemo(() => {
     const pool = allQuestions.filter((q) =>
@@ -694,9 +707,26 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
               <BookOpen className="h-3.5 w-3.5 text-emerald-300" />
               Exam Tables
             </button>
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-800 px-3 py-1.5 font-mono text-sm font-bold tabular-nums">
-              <Clock className="h-4 w-4 text-amber-400" />
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-mono text-sm font-bold tabular-nums ${
+                secondsLeft === 0
+                  ? 'border border-red-500/70 bg-red-950/80 text-red-200'
+                  : secondsLeft < paper.budgetSeconds * 0.15
+                  ? 'border border-amber-500/70 bg-amber-950/70 text-amber-200'
+                  : 'bg-neutral-800 text-white'
+              }`}
+            >
+              <Clock
+                className={`h-4 w-4 ${
+                  secondsLeft === 0
+                    ? 'text-red-400'
+                    : secondsLeft < paper.budgetSeconds * 0.15
+                    ? 'text-amber-300'
+                    : 'text-amber-400'
+                }`}
+              />
               {formatTimer(secondsLeft)}
+              {secondsLeft === 0 && <span className="text-[11px] uppercase">· Time Up</span>}
             </span>
             <button
               type="button"
@@ -728,29 +758,86 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
         )}
 
         {/* Question Navigator Palette */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[#E6E4DD] bg-white p-3.5 dark:border-[#262C36] dark:bg-[#161B22]">
-          {paper.items.map((item, idx) => {
-            const hasAns = hasAnswerEntered(answers[item.id]);
-            const isFlag = Boolean(flagged[item.id]);
+        <div className="rounded-2xl border border-[#E6E4DD] bg-white p-3.5 space-y-2.5 dark:border-[#262C36] dark:bg-[#161B22]">
+          {(() => {
+            const answeredCount = paper.items.filter((it) => hasAnswerEntered(answers[it.id])).length;
+            const flaggedCount = paper.items.filter((it) => Boolean(flagged[it.id])).length;
+            const filteredItems = paper.items
+              .map((item, idx) => ({ item, idx }))
+              .filter(({ item }) => {
+                if (navFilter === 'unanswered') return !hasAnswerEntered(answers[item.id]);
+                if (navFilter === 'flagged') return Boolean(flagged[item.id]);
+                return true;
+              });
             return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setCurrentIdx(idx)}
-                className={`rounded-lg border px-2.5 py-1 font-mono text-xs font-semibold ${
-                  idx === currentIdx
-                    ? 'border-[#0F5132] bg-[#0F5132] text-white dark:bg-emerald-600'
-                    : isFlag
-                    ? 'border-amber-400 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200'
-                    : hasAns
-                    ? 'border-emerald-300 bg-emerald-50 text-[#0F5132] dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
-                    : 'border-[#E6E4DD] bg-[#FAF9F6] text-neutral-700 dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-300'
-                }`}
-              >
-                {idx + 1} ({item.section})
-              </button>
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-semibold text-neutral-600 dark:text-neutral-300 tabular-nums">
+                    {answeredCount}/{paper.items.length} answered · {flaggedCount} flagged
+                  </span>
+                  <div className="inline-flex rounded-lg border border-[#E6E4DD] bg-[#FAF9F6] p-0.5 dark:border-[#262C36] dark:bg-[#12161D]">
+                    {(
+                      [
+                        { id: 'all', label: 'All' },
+                        { id: 'unanswered', label: 'Unanswered' },
+                        { id: 'flagged', label: 'Flagged' },
+                      ] as const
+                    ).map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setNavFilter(f.id)}
+                        className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                          navFilter === f.id
+                            ? 'bg-[#0F5132] text-white dark:bg-emerald-600'
+                            : 'text-neutral-600 hover:text-[#14171A] dark:text-neutral-300'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {filteredItems.length === 0 ? (
+                  <div className="flex items-center justify-between rounded-xl bg-[#FAF9F6] px-3 py-2 text-xs text-neutral-600 dark:bg-[#12161D] dark:text-neutral-300">
+                    <span>No items match the &ldquo;{navFilter}&rdquo; filter.</span>
+                    <button
+                      type="button"
+                      onClick={() => setNavFilter('all')}
+                      className="font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+                    >
+                      Show all items
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {filteredItems.map(({ item, idx }) => {
+                      const hasAns = hasAnswerEntered(answers[item.id]);
+                      const isFlag = Boolean(flagged[item.id]);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setCurrentIdx(idx)}
+                          className={`rounded-lg border px-2.5 py-1 font-mono text-xs font-semibold ${
+                            idx === currentIdx
+                              ? 'border-[#0F5132] bg-[#0F5132] text-white dark:bg-emerald-600'
+                              : isFlag
+                              ? 'border-amber-400 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200'
+                              : hasAns
+                              ? 'border-emerald-300 bg-emerald-50 text-[#0F5132] dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
+                              : 'border-[#E6E4DD] bg-[#FAF9F6] text-neutral-700 dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-300'
+                          }`}
+                        >
+                          {idx + 1} ({item.section})
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             );
-          })}
+          })()}
         </div>
 
         {/* Active Exam Question */}
@@ -840,12 +927,51 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
             </div>
           ) : curQ.type === 'case' ? (
             <div className="space-y-4">
+              {(() => {
+                const subQs = curQ.options as CaseSubQuestion[];
+                const arr = Array.isArray(curAns) ? curAns : [];
+                const answeredOtCount = subQs.filter((_, idx) =>
+                  hasAnswerEntered(arr[idx] as UserQuestionAnswer | undefined)
+                ).length;
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-3.5 py-2 dark:border-[#262C36] dark:bg-[#12161D]">
+                    <span className="font-mono text-xs font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">
+                      Section B Case · {answeredOtCount}/{subQs.length} OTs answered
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {subQs.map((sq, sIdx) => {
+                        const done = hasAnswerEntered(arr[sIdx] as UserQuestionAnswer | undefined);
+                        return (
+                          <button
+                            key={sq.sub_num}
+                            type="button"
+                            onClick={() => {
+                              document
+                                .getElementById(`mock-case-${curQ.id}-${sq.sub_num}`)
+                                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                            className={`rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors ${
+                              done
+                                ? 'border-emerald-300 bg-emerald-50 text-[#0F5132] dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
+                                : 'border-[#D8D4C8] bg-white text-neutral-700 hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-300'
+                            }`}
+                          >
+                            OT{sq.sub_num}
+                            {done ? ' ✓' : ''}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
               {(curQ.options as CaseSubQuestion[]).map((sq, sIdx) => {
                 const arr = Array.isArray(curAns) ? curAns : [];
                 return (
                   <div
                     key={sq.sub_num}
-                    className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]"
+                    id={`mock-case-${curQ.id}-${sq.sub_num}`}
+                    className="scroll-mt-20 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]"
                   >
                     <p className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
                       OT {sq.sub_num} ({sq.marks} marks)
@@ -1040,6 +1166,11 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
                       {q.title}
                     </span>
                     <span className="font-mono text-xs font-bold tabular-nums">
+                      {q.type === 'cr' && !crSyncedToMastery && crSelfMarks[q.id] === undefined && (
+                        <span className="mr-2 font-sans text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                          Self-mark pending ·
+                        </span>
+                      )}
                       {finalScored}/{q.marks}m · Expand
                     </span>
                   </summary>
@@ -1105,7 +1236,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
                                       className="mt-0.5"
                                     />
                                     <span className="text-[#14171A] dark:text-[#F0F3F6]">
-                                      {step.label}
+                                      {formatMarkSchemeLabel(step.label)}
                                     </span>
                                   </span>
                                   <span className="shrink-0 font-mono font-bold text-[#0F5132] dark:text-emerald-400">
@@ -1141,8 +1272,8 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
                       <strong>Your Answer:</strong> {res.userDisplay} · <strong>Expected:</strong>{' '}
                       {res.correctDisplay}
                     </p>
-                    <div className="whitespace-pre-line rounded-xl bg-[#FAF9F6] p-3.5 font-mono text-[#14171A] dark:bg-[#12161D] dark:text-neutral-200">
-                      {q.full_worked_solution}
+                    <div className="rounded-xl bg-[#FAF9F6] p-3.5 dark:bg-[#12161D]">
+                      <WorkedSolutionBlock text={q.full_worked_solution} compact />
                     </div>
                     <p className="text-amber-900 dark:text-amber-300">
                       <strong>Examiner Trap:</strong> {q.examiner_debrief.trap_of_question}

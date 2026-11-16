@@ -34,6 +34,7 @@ import {
   generateTrapVariant,
   getProformaTemplateForTopic,
 } from '../engine/taxCalculators';
+import { formatMarkSchemeLabel } from '../engine/workedSolutionParser';
 import type {
   AppState,
   CaseSubQuestion,
@@ -42,9 +43,23 @@ import type {
   McqOption,
   PairDropdownGroup,
 } from '../types/tx';
+import { FormattedCoachText } from './FormattedCoachText';
 import { ScenarioText } from './ScenarioText';
 import { TaxCalculatorPad } from './TaxCalculatorPad';
 import { TaxTablesDrawer } from './TaxTablesView';
+import { WorkedSolutionBlock } from './WorkedSolutionBlock';
+
+function isSubAnswered(val: unknown): boolean {
+  if (val === undefined || val === null) return false;
+  if (typeof val === 'string') return val.trim().length > 0;
+  if (Array.isArray(val)) return val.some((x) => typeof x === 'string' && x.trim().length > 0);
+  if (typeof val === 'object') {
+    return Object.values(val as Record<string, unknown>).some(
+      (arr) => Array.isArray(arr) && arr.length > 0
+    );
+  }
+  return false;
+}
 
 interface QuestionPlayerProps {
   question: KitQuestion;
@@ -113,8 +128,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'unattempted' | 'missed'>('ALL');
   const [searchQ, setSearchQ] = useState('');
 
-  // Reset state whenever question changes
-  useEffect(() => {
+  const resetWorkspaceInputs = React.useCallback(() => {
     if (question.type === 'case') {
       const subs = question.options as CaseSubQuestion[];
       setAnswer(
@@ -143,7 +157,15 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     setTimerRunning(true);
     setMicroDrillAlert(null);
     setAiCritique(null);
-  }, [question.id, question.marks, question.type, question.interaction]);
+  }, [question.type, question.interaction, question.options, question.marks]);
+
+  // Reset state and scroll cleanly to top whenever question changes
+  useEffect(() => {
+    resetWorkspaceInputs();
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [question.id, resetWorkspaceInputs]);
 
   useEffect(() => {
     if (!timerRunning || locked) return;
@@ -156,8 +178,17 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
   // Keyboard shortcuts for fast practice flow
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'Escape' && queueOpen) {
+        e.preventDefault();
+        setQueueOpen(false);
+        return;
+      }
+      const targetEl = e.target as HTMLElement | null;
+      const tag = targetEl?.tagName;
+      const inputType = tag === 'INPUT' ? (targetEl as HTMLInputElement).type.toLowerCase() : '';
+      if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && inputType !== 'radio' && inputType !== 'checkbox')) {
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       const k = e.key.toLowerCase();
@@ -184,12 +215,17 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
         if (picked) {
           e.preventDefault();
           setAnswer(picked.key);
+          return;
+        }
+        if (e.key === 'Enter' && typeof answer === 'string' && answer.trim().length > 0) {
+          e.preventDefault();
+          handleSubmit(false);
         }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [locked, question]);
+  }, [locked, question, queueOpen, answer]);
 
   const watchlistTraps = useMemo(() => {
     return Object.values(appState.trapLedger)
@@ -228,6 +264,23 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
   }, [allQuestions, secFilter, areaFilter, statusFilter, searchQ, attemptedIds, missedIds]);
 
   const currentIdx = filteredList.findIndex((item) => item.id === question.id);
+
+  useEffect(() => {
+    const onNavKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === '[' && currentIdx > 0) {
+        e.preventDefault();
+        onSelectQuestion(filteredList[currentIdx - 1]);
+      } else if (e.key === ']' && currentIdx >= 0 && currentIdx < filteredList.length - 1) {
+        e.preventDefault();
+        onSelectQuestion(filteredList[currentIdx + 1]);
+      }
+    };
+    window.addEventListener('keydown', onNavKey);
+    return () => window.removeEventListener('keydown', onNavKey);
+  }, [currentIdx, filteredList, onSelectQuestion]);
 
   const handleSubmit = (skipReveal = false) => {
     const elapsed = Math.max(1, budgetSeconds - secondsLeft);
@@ -335,7 +388,8 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     options: McqOption[] | MatrixOptions | PairDropdownGroup[],
     val: unknown,
     onChange: (nextVal: UserQuestionAnswer) => void,
-    prefixKey: string
+    prefixKey: string,
+    onEnterSubmit?: () => void
   ) => {
     if (interaction === 'numeric_input') {
       return (
@@ -353,6 +407,12 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               disabled={locked}
               value={typeof val === 'string' ? val : ''}
               onChange={(e) => onChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !locked && onEnterSubmit) {
+                  e.preventDefault();
+                  onEnterSubmit();
+                }
+              }}
               placeholder="e.g. 7420"
               className="w-full bg-transparent px-3.5 py-2.5 font-mono text-sm font-semibold text-[#14171A] focus:outline-none disabled:opacity-70 dark:text-[#F0F3F6]"
             />
@@ -553,8 +613,14 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
 
       {/* Slide-out Question Queue Drawer */}
       {queueOpen && (
-        <div className="fixed inset-0 z-50 flex justify-start bg-black/40 backdrop-blur-[1px]">
-          <div className="flex h-full w-full max-w-md flex-col border-r border-[#E6E4DD] bg-white shadow-2xl dark:border-[#262C36] dark:bg-[#161B22]">
+        <div
+          onClick={() => setQueueOpen(false)}
+          className="fixed inset-0 z-50 flex justify-start bg-black/40 backdrop-blur-[1px]"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-full w-full max-w-md flex-col border-r border-[#E6E4DD] bg-white shadow-2xl dark:border-[#262C36] dark:bg-[#161B22]"
+          >
             <div className="flex items-center justify-between border-b border-[#E6E4DD] px-5 py-4 dark:border-[#262C36]">
               <div>
                 <h2 className="font-display text-base font-semibold text-[#14171A] dark:text-[#F0F3F6]">
@@ -579,11 +645,22 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
                 <input
                   type="text"
+                  aria-label="Search question bank"
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
                   placeholder="Jump to Q#, title, or topic..."
-                  className="w-full rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] py-2 pl-8 pr-3 text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                  className="w-full rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] py-2 pl-8 pr-8 text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
                 />
+                {searchQ && (
+                  <button
+                    type="button"
+                    aria-label="Clear question search"
+                    onClick={() => setSearchQ('')}
+                    className="absolute right-2.5 top-2 rounded p-0.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-1.5">
@@ -815,9 +892,12 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
 
           <button
             type="button"
-            onClick={() =>
-              onSelectQuestion(generateTrapVariant(question.topic_id, Math.floor(Math.random() * 3)))
-            }
+            onClick={() => {
+              const varMatch = question.id.match(/^VAR-T\d+-(\d+)$/);
+              const currentSeed = varMatch ? Number(varMatch[1]) - 1 : -1;
+              const nextSeed = (currentSeed + 1) % 3;
+              onSelectQuestion(generateTrapVariant(question.topic_id, nextSeed));
+            }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#14171A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
@@ -911,13 +991,47 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
           >
             {question.type === 'case' ? (
               <div className="space-y-4">
-                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                  Section B Case: Complete all 5 Objective Tests below, then submit together.
-                </p>
+                {(() => {
+                  const subs = question.options as CaseSubQuestion[];
+                  const arr = Array.isArray(answer) ? answer : [];
+                  const answeredCount = subs.filter((_, i) => isSubAnswered(arr[i])).length;
+                  return (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-3.5 py-2.5 dark:border-[#262C36] dark:bg-[#12161D]">
+                      <span className="font-mono text-xs font-semibold text-neutral-700 dark:text-neutral-300 tabular-nums">
+                        Section B Case · {answeredCount}/5 OTs answered
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {subs.map((sq, i) => {
+                          const done = isSubAnswered(arr[i]);
+                          return (
+                            <button
+                              key={sq.sub_num}
+                              type="button"
+                              onClick={() =>
+                                document
+                                  .getElementById(`player-ot-${sq.sub_num}`)
+                                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                              }
+                              className={`rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors ${
+                                done
+                                  ? 'border-emerald-300 bg-emerald-50 text-[#0F5132] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                  : 'border-[#D8D4C8] bg-white text-neutral-600 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-300'
+                              }`}
+                            >
+                              OT{sq.sub_num}
+                              {done ? ' ✓' : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {(question.options as CaseSubQuestion[]).map((sq, idx) => {
                   const arr = Array.isArray(answer) ? answer : [];
                   return (
                     <div
+                      id={`player-ot-${sq.sub_num}`}
                       key={sq.sub_num}
                       className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]"
                     >
@@ -1086,7 +1200,8 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 question.options as McqOption[] | MatrixOptions | PairDropdownGroup[],
                 answer,
                 (v) => setAnswer(v),
-                `single-${question.id}`
+                `single-${question.id}`,
+                () => handleSubmit(false)
               )
             )}
 
@@ -1126,8 +1241,10 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                   </div>
 
                   {question.type === 'mcq' && (
-                    <span className="hidden font-mono text-[11px] text-neutral-400 sm:inline">
-                      Keys: A–D select · C calc · T tables
+                    <span className="hidden font-mono text-[11px] text-neutral-500 dark:text-neutral-400 sm:inline">
+                      {question.interaction === 'single_mcq' || question.interaction === 'grid_2x2'
+                        ? 'Keys: A–D select · Enter submit · C calc · T tables'
+                        : 'Keys: A–D select · C calc · T tables'}
                     </span>
                   )}
                 </div>
@@ -1195,8 +1312,18 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-4 py-2 font-mono text-sm font-bold text-[#14171A] tabular-nums dark:border-[#262C36] dark:bg-[#12161D] dark:text-[#F0F3F6]">
-                {graded.isAutoGraded ? graded.marksScored : selfMarkedScore} / {question.marks} marks
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-4 py-2 font-mono text-sm font-bold text-[#14171A] tabular-nums dark:border-[#262C36] dark:bg-[#12161D] dark:text-[#F0F3F6]">
+                  {graded.isAutoGraded ? graded.marksScored : selfMarkedScore} / {question.marks} marks
+                </div>
+                <button
+                  type="button"
+                  onClick={resetWorkspaceInputs}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#D8D4C8] bg-white px-3.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200 dark:hover:bg-[#242C38]"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Retry Question
+                </button>
               </div>
             </div>
 
@@ -1274,7 +1401,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                           }
                           className="h-4 w-4 rounded border-neutral-300 text-[#0F5132]"
                         />
-                        {step.label}
+                        {formatMarkSchemeLabel(step.label)}
                       </span>
                       <span className="font-mono font-bold text-[#0F5132] dark:text-emerald-400 tabular-nums">
                         {step.marks}m
@@ -1285,10 +1412,11 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               </div>
 
               {aiCritique && (
-                <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/50 p-4 text-xs text-[#14171A] whitespace-pre-line dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-neutral-200">
-                  <strong className="text-[#0F5132] dark:text-emerald-400">Examiner Critique:</strong>
-                  {'\n'}
-                  {aiCritique}
+                <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/50 p-4 text-xs leading-relaxed text-[#14171A] space-y-2 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-neutral-200">
+                  <p className="font-semibold text-[#0F5132] dark:text-emerald-400">
+                    Examiner Critique
+                  </p>
+                  <FormattedCoachText text={aiCritique} />
                 </div>
               )}
             </div>
@@ -1342,7 +1470,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               </div>
             )}
 
-            <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-2 dark:border-[#262C36] dark:bg-[#12161D]">
+            <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#14171A] dark:text-[#F0F3F6]">
                   Full Worked Solution (Kit {question.answer_page})
@@ -1351,9 +1479,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                   {question.kit_page} · {question.st_chapter}
                 </span>
               </div>
-              <div className="whitespace-pre-line font-mono text-xs leading-relaxed text-[#14171A] dark:text-neutral-200">
-                {question.full_worked_solution}
-              </div>
+              <WorkedSolutionBlock text={question.full_worked_solution} />
             </div>
           </div>
 

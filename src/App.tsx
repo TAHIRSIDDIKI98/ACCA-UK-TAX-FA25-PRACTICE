@@ -12,10 +12,10 @@ import type {
   AppState,
   KitQuestion,
   MockResultRecord,
+  NavTab,
   SectionType,
   UserProfile,
 } from './types/tx';
-import type { NavTab } from './components/TopBar';
 import { AppShell } from './components/AppShell';
 import { DashboardView } from './components/DashboardView';
 import { TopicView } from './components/TopicView';
@@ -151,11 +151,17 @@ export default function App() {
 
   const handleLaunchMicroDrill = (trapCategory: string) => {
     const lower = trapCategory.toLowerCase();
-    const match = ALL_BANK_QUESTIONS.find(
+    const attemptedIds = new Set(appState.attempts.map((a) => a.questionId));
+    const missedIds = new Set(appState.mistakes.map((m) => m.questionId));
+    const candidates = ALL_BANK_QUESTIONS.filter(
       (q) =>
         q.examiner_debrief.trap_category.toLowerCase() === lower &&
         q.id !== activeQuestion.id
     );
+    const match =
+      candidates.find((q) => missedIds.has(q.id)) ??
+      candidates.find((q) => !attemptedIds.has(q.id)) ??
+      candidates[0];
     if (match) {
       handleLaunchQuestion(match, 4);
       return;
@@ -318,6 +324,7 @@ export default function App() {
       <TaxTablesDrawer
         open={globalTablesOpen}
         onClose={() => setGlobalTablesOpen(false)}
+        onOpenQuestionById={handleOpenQuestionById}
       />
 
       {activeTab === 'overview' && (
@@ -364,7 +371,10 @@ export default function App() {
           allQuestions={ALL_BANK_QUESTIONS}
           tier={activeTier}
           appState={appState}
-          onSelectQuestion={(q) => setActiveQuestion(q)}
+          onSelectQuestion={(q) => {
+            setActiveQuestion(q);
+            setActiveTier(q.is_variant ? 4 : q.section === 'A' ? 2 : 3);
+          }}
           onRecordAttempt={handleRecordAttempt}
           onLaunchMicroDrill={handleLaunchMicroDrill}
         />
@@ -398,6 +408,8 @@ export default function App() {
         <TaxTablesView
           appState={appState}
           onImportState={(nextState) => setAppState(nextState)}
+          onOpenTopic={handleSelectTopic}
+          onOpenQuestionById={handleOpenQuestionById}
         />
       )}
     </AppShell>

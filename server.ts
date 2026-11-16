@@ -26,6 +26,23 @@ const studyTextMemory: StudyTextState = {
   sampleHeadings: [],
 };
 
+let cachedKitDocPromise: Promise<any> | null = null;
+const kitLookupCache = new Map<number, { bookPage: number | null; snippet: string }>();
+
+async function getCachedKitPdfDoc() {
+  if (!cachedKitDocPromise) {
+    cachedKitDocPromise = (async () => {
+      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      const data = new Uint8Array(fs.readFileSync(KIT_PDF_PATH));
+      return pdfjs.getDocument({ data, verbosity: 0 }).promise;
+    })().catch((err) => {
+      cachedKitDocPromise = null;
+      throw err;
+    });
+  }
+  return cachedKitDocPromise;
+}
+
 function getGeminiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
@@ -117,21 +134,78 @@ async function startServer() {
     }
   });
 
-  // On-demand snippet lookup from the on-disk Exam Kit PDF for blocks beyond Q1–127 (CGT/IHT/CT/VAT)
+  // On-demand snippet lookup from the on-disk Exam Kit PDF for Kit Q1–306 & Specimen
   app.get('/api/kit/lookup', async (req, res) => {
     try {
-      const qNum = Number(req.query.q || 0);
-      if (!qNum || qNum < 1 || qNum > 306) {
-        res.status(400).json({ ok: false, error: 'Specify q=1..306' });
-        return;
-      }
+      const rawQuery = String(req.query.q || '').trim().toUpperCase();
       if (!fs.existsSync(KIT_PDF_PATH)) {
         res.status(404).json({ ok: false, error: 'Exam Kit PDF not found on disk' });
         return;
       }
-      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-      const data = new Uint8Array(fs.readFileSync(KIT_PDF_PATH));
-      const doc = await pdfjs.getDocument({ data, verbosity: 0 }).promise;
+
+      const isSpecimen = rawQuery.startsWith('SPEC') || /^S\d+$/.test(rawQuery);
+      if (isSpecimen) {
+        const doc = await getCachedKitPdfDoc();
+        const specNum = Math.min(33, Math.max(1, Number(rawQuery.replace(/[^\d]/g, '')) || 1));
+        const isCase = rawQuery.includes('CASE');
+        const label = isCase ? `Specimen Case ${specNum}` : `Specimen Q${specNum}`;
+        let foundBookPage: number | null = null;
+        let snippet = '';
+        for (let p = 655; p <= Math.min(672, doc.numPages); p++) {
+          const page = await doc.getPage(p);
+          const content = await page.getTextContent();
+          const text = content.items
+            .map((it: unknown) =>
+              it && typeof it === 'object' && 'str' in it ? String((it as { str: unknown }).str) : ''
+            )
+            .join(' ')
+            .replace(/\s+/g, ' ');
+          const searchToken = isCase
+            ? specNum === 1
+              ? 'Dub Ltd'
+              : specNum === 2
+              ? 'Opal'
+              : 'Glacier Ltd'
+            : String(specNum);
+          const matched = isCase
+            ? text.includes(searchToken)
+            : new RegExp(`(?:^|\\s)${specNum}\\s+[A-Z]`).test(text);
+          if (matched) {
+            foundBookPage = p - 46;
+            snippet = text.slice(0, 1400);
+            break;
+          }
+        }
+        res.json({
+          ok: true,
+          cached: false,
+          label,
+          bookPage: foundBookPage,
+          snippet:
+            snippet || `${label} lives in the Kaplan TX-UK FA25 Specimen Exam (pages 609–622).`,
+        });
+        return;
+      }
+
+      const qNum = Number(rawQuery.replace(/[^\d]/g, '') || 0);
+      if (!qNum || qNum < 1 || qNum > 306) {
+        res.status(400).json({ ok: false, error: 'Specify q=1..306 or SPEC-Q1..33' });
+        return;
+      }
+      const cached = kitLookupCache.get(qNum);
+      if (cached) {
+        res.json({
+          ok: true,
+          cached: true,
+          qNum,
+          label: `Kit Q${qNum}`,
+          bookPage: cached.bookPage,
+          snippet: cached.snippet,
+        });
+        return;
+      }
+
+      const doc = await getCachedKitPdfDoc();
 
       // Locate exact PDF page range based on Exam Kit question block (+46 front-matter offset)
       let startPdf = 47;
@@ -156,7 +230,7 @@ async function startServer() {
         const page = await doc.getPage(p);
         const content = await page.getTextContent();
         const text = content.items
-          .map((it) => ('str' in it ? it.str : ''))
+          .map((it: unknown) => (it && typeof it === 'object' && 'str' in it ? String((it as { str: unknown }).str) : ''))
           .join(' ')
           .replace(/\s+/g, ' ');
         const regex = new RegExp(`(?:^|\\s)${qNum}\\s+[A-Z][A-Za-z0-9'()\\- ]{2,60}`);
@@ -167,13 +241,18 @@ async function startServer() {
         }
       }
 
+      const resolvedSnippet =
+        snippet ||
+        `Question Q${qNum} lives in the Kaplan TX-UK FA25 Exam Kit PDF (pages ${startPdf - 46}–${endPdf - 46}).`;
+      kitLookupCache.set(qNum, { bookPage: foundBookPage, snippet: resolvedSnippet });
+
       res.json({
         ok: true,
+        cached: false,
         qNum,
+        label: `Kit Q${qNum}`,
         bookPage: foundBookPage,
-        snippet:
-          snippet ||
-          `Question Q${qNum} lives in the Kaplan TX-UK FA25 Exam Kit PDF (pages ${startPdf - 46}–${endPdf - 46}).`,
+        snippet: resolvedSnippet,
       });
     } catch (err) {
       res.status(500).json({
@@ -185,7 +264,7 @@ async function startServer() {
 
   // Server-side Gemini CR examiner feedback (uses GEMINI_API_KEY exclusively on backend)
   app.post('/api/coach/grade-cr', async (req, res) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const ai = getGeminiClient();
     const { questionTitle, requirement, modelSolution, userResponse, marks } = req.body as {
       questionTitle?: string;
       requirement?: string;
@@ -199,7 +278,7 @@ async function startServer() {
       return;
     }
 
-    if (!apiKey) {
+    if (!ai) {
       res.json({
         ok: true,
         source: 'deterministic',
@@ -210,10 +289,6 @@ async function startServer() {
     }
 
     try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-      });
 
       const prompt = `You are an ACCA TX-UK (Finance Act 2025) Senior Marker.
 Question: ${questionTitle || 'Constructed Response'} (${marks || 10} marks)

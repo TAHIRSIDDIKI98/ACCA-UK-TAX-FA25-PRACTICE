@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   BookOpen,
@@ -19,8 +19,7 @@ import {
 } from 'lucide-react';
 import { EXAM_CARD } from '../data/taxReference';
 import { computeStudyPlanDays } from '../engine/mastery';
-import type { AppState, UserProfile } from '../types/tx';
-import type { NavTab } from './TopBar';
+import type { AppState, NavTab, UserProfile } from '../types/tx';
 
 interface AppShellProps {
   activeTab: NavTab;
@@ -48,7 +47,7 @@ const RAIL_LINKS: {
   { id: 'player', label: 'Practice Studio', hint: '327 Kit + Specimen', icon: PlayCircle },
   { id: 'mock', label: 'CBE Mock', hint: 'Timed exams & clinics', icon: GraduationCap },
   { id: 'mistakes', label: 'Revision Clinic', hint: 'SRS, traps & memory', icon: ShieldAlert },
-  { id: 'tables', label: 'FA25 Tables', hint: 'Rates & backup', icon: Table2 },
+  { id: 'tables', label: 'FA25 Tables', hint: 'Rates, rules & examples', icon: Table2 },
 ];
 
 export const AppShell: React.FC<AppShellProps> = ({
@@ -86,9 +85,53 @@ export const AppShell: React.FC<AppShellProps> = ({
     setSettingsOpen(false);
   };
 
+  useEffect(() => {
+    if (!settingsOpen && !mobileNavOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSettingsOpen(false);
+        setMobileNavOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [settingsOpen, mobileNavOpen]);
+
+  useEffect(() => {
+    setDraftProfile(appState.profile);
+  }, [appState.profile]);
+
+  const resolveQuickJumpId = (input: string): string => {
+    const raw = input.trim().toUpperCase();
+    if (!raw) return 'Q1';
+    if (/^SPEC-?CASE-?[123]$/.test(raw) || /^SC[123]$/.test(raw)) {
+      const caseNum = raw.replace(/[^\d]/g, '') || '1';
+      return `SPEC-CASE-${caseNum}`;
+    }
+    if (raw.startsWith('SPEC') || /^S\d+$/i.test(raw)) {
+      const specNum = Math.min(33, Math.max(1, Number(raw.replace(/[^\d]/g, '')) || 1));
+      if (specNum >= 16 && specNum <= 20) return 'SPEC-CASE-1';
+      if (specNum >= 21 && specNum <= 25) return 'SPEC-CASE-2';
+      if (specNum >= 26 && specNum <= 30) return 'SPEC-CASE-3';
+      return `SPEC-Q${specNum}`;
+    }
+    const qNum = Math.min(306, Math.max(1, Number(raw.replace(/[^\d]/g, '')) || 1));
+    return `Q${qNum}`;
+  };
+
+  const handleOpenQuickJump = () => {
+    onOpenQuestionById(resolveQuickJumpId(kitLookupQ));
+    setSettingsOpen(false);
+  };
+
   const handleStudyTextFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      setUploadStatus('File exceeds 25 MB upload limit. Please attach a compressed PDF.');
+      return;
+    }
     setUploadStatus('Reading PDF metadata...');
     const reader = new FileReader();
     reader.onload = async () => {
@@ -117,13 +160,14 @@ export const AppShell: React.FC<AppShellProps> = ({
   };
 
   const handleKitLookup = async () => {
+    const targetId = resolveQuickJumpId(kitLookupQ);
     setKitLookupResult('Searching Exam Kit PDF...');
     try {
-      const res = await fetch(`/api/kit/lookup?q=${encodeURIComponent(kitLookupQ)}`);
+      const res = await fetch(`/api/kit/lookup?q=${encodeURIComponent(targetId)}`);
       const data = await res.json();
       if (data.ok) {
         setKitLookupResult(
-          `Kit Q${data.qNum}${data.bookPage ? ` (Kit p.${data.bookPage})` : ''}: ${data.snippet}`
+          `${data.label ?? `Kit Q${data.qNum}`}${data.bookPage ? ` (Kit p.${data.bookPage})` : ''}: ${data.snippet}`
         );
       } else {
         setKitLookupResult(data.error || 'Lookup failed');
@@ -280,8 +324,14 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Study Profile, Kit Jump & PDF Slide-Over Drawer */}
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[1px]">
-          <div className="flex h-full w-full max-w-md flex-col border-l border-[#E6E4DD] bg-white shadow-2xl dark:border-[#262C36] dark:bg-[#161B22]">
+        <div
+          onClick={() => setSettingsOpen(false)}
+          className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[1px]"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-full w-full max-w-md flex-col border-l border-[#E6E4DD] bg-white shadow-2xl dark:border-[#262C36] dark:bg-[#161B22]"
+          >
             <div className="flex items-center justify-between border-b border-[#E6E4DD] px-5 py-4 dark:border-[#262C36]">
               <div>
                 <h2 className="font-display text-base font-bold text-[#14171A] dark:text-[#F0F3F6]">
@@ -391,23 +441,25 @@ export const AppShell: React.FC<AppShellProps> = ({
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   <input
-                    type="number"
-                    min={1}
-                    max={306}
+                    type="text"
+                    aria-label="Jump to question number"
+                    placeholder="e.g. 128, SPEC-Q33, SPEC-CASE-2"
                     value={kitLookupQ}
                     onChange={(e) => setKitLookupQ(e.target.value)}
-                    className="w-20 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleOpenQuickJump();
+                      }
+                    }}
+                    className="w-40 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
                   />
                   <button
                     type="button"
-                    onClick={() => {
-                      const qNum = Math.min(306, Math.max(1, Number(kitLookupQ) || 1));
-                      onOpenQuestionById(`Q${qNum}`);
-                      setSettingsOpen(false);
-                    }}
+                    onClick={handleOpenQuickJump}
                     className="rounded-lg bg-[#0F5132] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
                   >
-                    Open Q{kitLookupQ || 1} →
+                    Open {resolveQuickJumpId(kitLookupQ)} →
                   </button>
                   <button
                     type="button"

@@ -8,7 +8,9 @@ import {
   Eye,
   Layers,
   RotateCcw,
+  Search,
   Split,
+  X,
 } from 'lucide-react';
 import {
   CONFUSION_CLINIC_PAIRS,
@@ -47,6 +49,7 @@ export const LabsView: React.FC<LabsViewProps> = ({
 
   // Mistake Bank filter & inline Gemini Tutor row
   const [srsFilter, setSrsFilter] = useState<'all' | 'due'>('all');
+  const [mistakeSearch, setMistakeSearch] = useState('');
   const [activeTutorMistakeId, setActiveTutorMistakeId] = useState<string | null>(null);
 
   // Confusion Clinic interactive state
@@ -64,9 +67,17 @@ export const LabsView: React.FC<LabsViewProps> = ({
   const dueMistakes = useMemo(() => getDueMistakes(appState.mistakes), [appState.mistakes]);
 
   const visibleMistakes = useMemo(() => {
-    if (srsFilter === 'due') return dueMistakes;
-    return appState.mistakes;
-  }, [srsFilter, dueMistakes, appState.mistakes]);
+    const base = srsFilter === 'due' ? dueMistakes : appState.mistakes;
+    const q = mistakeSearch.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(
+      (m) =>
+        m.questionId.toLowerCase().includes(q) ||
+        m.topicName.toLowerCase().includes(q) ||
+        m.ruleMissed.toLowerCase().includes(q) ||
+        m.kitCitation.toLowerCase().includes(q)
+    );
+  }, [srsFilter, dueMistakes, appState.mistakes, mistakeSearch]);
 
   const srsLabel = (stage: number) => {
     if (stage === 0) return 'Stage 1 · +1d review';
@@ -145,7 +156,7 @@ export const LabsView: React.FC<LabsViewProps> = ({
                 onOpenQuestionById={onRedrillQuestion}
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
                 <div className="inline-flex rounded-lg border border-[#E6E4DD] bg-white p-1 dark:border-[#262C36] dark:bg-[#161B22]">
                   <button
                     type="button"
@@ -170,22 +181,64 @@ export const LabsView: React.FC<LabsViewProps> = ({
                     Due Now ({dueMistakes.length})
                   </button>
                 </div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Click <strong className="text-[#14171A] dark:text-neutral-200">AI Tutor</strong> on any row for Gemini Socratic breakdown &amp; fresh check questions.
-                </p>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative w-56 sm:w-64">
+                    <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-neutral-400" />
+                    <input
+                      type="text"
+                      aria-label="Filter logged mistakes"
+                      value={mistakeSearch}
+                      onChange={(e) => setMistakeSearch(e.target.value)}
+                      placeholder="Filter Q#, topic, or trap..."
+                      className="w-full rounded-lg border border-[#D8D4C8] bg-white py-1.5 pl-8 pr-7 text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#161B22] dark:text-[#F0F3F6]"
+                    />
+                    {mistakeSearch && (
+                      <button
+                        type="button"
+                        aria-label="Clear mistake filter"
+                        onClick={() => setMistakeSearch('')}
+                        className="absolute right-2 top-1.5 rounded p-0.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Click <strong className="text-[#14171A] dark:text-neutral-200">AI Tutor</strong> on any row for Gemini Socratic breakdown.
+                  </p>
+                </div>
               </div>
 
               {visibleMistakes.length === 0 ? (
                 <div className="rounded-2xl border border-[#E6E4DD] bg-white p-6 text-center text-xs text-neutral-600 dark:border-[#262C36] dark:bg-[#161B22] dark:text-neutral-400">
-                  No spaced-repetition items due right now. Switch to{' '}
-                  <button
-                    type="button"
-                    onClick={() => setSrsFilter('all')}
-                    className="font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
-                  >
-                    All Logged ({appState.mistakes.length})
-                  </button>{' '}
-                  to inspect or ask Gemini about past mistakes.
+                  {mistakeSearch.trim() ? (
+                    <>
+                      No mistakes match &ldquo;{mistakeSearch.trim()}&rdquo;.{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMistakeSearch('');
+                          setSrsFilter('all');
+                        }}
+                        className="font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+                      >
+                        Reset filter
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      No spaced-repetition items due right now. Switch to{' '}
+                      <button
+                        type="button"
+                        onClick={() => setSrsFilter('all')}
+                        className="font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+                      >
+                        All Logged ({appState.mistakes.length})
+                      </button>{' '}
+                      to inspect or ask Gemini about past mistakes.
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]">
