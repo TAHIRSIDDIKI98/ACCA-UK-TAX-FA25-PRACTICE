@@ -377,6 +377,109 @@ export function calculateCapitalAllowances2526(input: CapitalAllowanceSimInput) 
   };
 }
 
+export function calculatePensionAnnualAllowance2526(params: {
+  thresholdIncome: number;
+  adjustedIncome: number;
+  unusedBfYears?: number;
+  grossContribution?: number;
+}) {
+  const th = Math.max(0, params.thresholdIncome);
+  const adj = Math.max(0, params.adjustedIncome);
+  const bf = Math.max(0, params.unusedBfYears ?? 0);
+  const contrib = Math.max(0, params.grossContribution ?? 0);
+
+  const isTapered = th > 200_000 && adj > 260_000;
+  const taperReduction = isTapered ? Math.min(50_000, Math.floor((adj - 260_000) / 2)) : 0;
+  const currentYearAa = 60_000 - taperReduction;
+  const maxAvailableWithCf = currentYearAa + bf;
+  const excessContribution = Math.max(0, contrib - maxAvailableWithCf);
+
+  return {
+    standardAa: 60_000,
+    isTapered,
+    taperReduction,
+    currentYearAa,
+    unusedBfTotal: bf,
+    maxAvailableWithCf,
+    excessContribution,
+  };
+}
+
+export function calculateIhtLifetimeAndDeath2526(params: {
+  transferValue: number;
+  aeAvailable?: number;
+  priorClts7Years?: number;
+  yearsSurvived: number;
+  isClt: boolean;
+  donorPaysLifetime?: boolean;
+}) {
+  const transfer = Math.max(0, params.transferValue);
+  const ae = Math.min(transfer, Math.max(0, params.aeAvailable ?? 6_000));
+  const chargeableAfterAe = transfer - ae;
+  const nrbRemaining = Math.max(0, 325_000 - Math.max(0, params.priorClts7Years ?? 0));
+
+  const taxableLifetimeExcess = Math.max(0, chargeableAfterAe - nrbRemaining);
+  const lifetimeTax = params.isClt
+    ? params.donorPaysLifetime
+      ? Math.round(taxableLifetimeExcess * 0.25)
+      : Math.round(taxableLifetimeExcess * 0.2)
+    : 0;
+
+  const grossTransferOnDeath =
+    params.isClt && params.donorPaysLifetime ? chargeableAfterAe + lifetimeTax : chargeableAfterAe;
+
+  const y = Math.max(0, params.yearsSurvived);
+  let taperReliefPct = 0;
+  if (y >= 7) taperReliefPct = 100;
+  else if (y >= 6) taperReliefPct = 80;
+  else if (y >= 5) taperReliefPct = 60;
+  else if (y >= 4) taperReliefPct = 40;
+  else if (y >= 3) taperReliefPct = 20;
+
+  const taxableOnDeath = Math.max(0, grossTransferOnDeath - nrbRemaining);
+  const grossDeathTax40 = y >= 7 ? 0 : Math.round(taxableOnDeath * 0.4);
+  const deathTaxAfterTaper =
+    y >= 7 ? 0 : Math.round(grossDeathTax40 * ((100 - taperReliefPct) / 100));
+  const netDeathTaxDue = Math.max(0, deathTaxAfterTaper - lifetimeTax);
+
+  return {
+    chargeableAfterAe,
+    nrbRemaining,
+    lifetimeTax,
+    grossTransferOnDeath,
+    taperReliefPct,
+    grossDeathTax40,
+    deathTaxAfterTaper,
+    netDeathTaxDue,
+  };
+}
+
+export function calculateVatRegistrationAndFrs2526(params: {
+  rolling12mTurnover: number;
+  next30dTurnover: number;
+  vatInclusiveTurnover: number;
+  frsRatePct: number;
+  firstYearDiscount: boolean;
+}) {
+  const mustRegisterHistoric = params.rolling12mTurnover > 90_000;
+  const mustRegisterFuture = params.next30dTurnover > 90_000;
+  const registrationRequired = mustRegisterHistoric || mustRegisterFuture;
+  const effectiveFrsRatePct = Math.max(0, params.frsRatePct - (params.firstYearDiscount ? 1 : 0));
+  const frsVatPayable = Math.round(
+    (Math.max(0, params.vatInclusiveTurnover) * effectiveFrsRatePct) / 100
+  );
+
+  return {
+    threshold: 90_000,
+    deregThreshold: 88_000,
+    mustRegisterHistoric,
+    mustRegisterFuture,
+    registrationRequired,
+    effectiveFrsRatePct,
+    frsVatPayable,
+  };
+}
+
 function buildRotatedMcq(
   correctText: string,
   distractors: { text: string; reason: string }[],

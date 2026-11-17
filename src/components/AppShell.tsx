@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   BookOpen,
   Calendar,
   Compass,
@@ -10,6 +11,7 @@ import {
   Menu,
   Moon,
   PlayCircle,
+  Search,
   Settings2,
   ShieldAlert,
   Sun,
@@ -18,8 +20,13 @@ import {
   X,
 } from 'lucide-react';
 import { EXAM_CARD } from '../data/taxReference';
-import { computeStudyPlanDays } from '../engine/mastery';
-import type { AppState, NavTab, UserProfile } from '../types/tx';
+import {
+  computeStudyPlanDays,
+  resolveQuestionJump,
+  searchQuickJumpTargets,
+  type QuickJumpTarget,
+} from '../engine/mastery';
+import type { AppState, KitQuestion, NavTab, UserProfile } from '../types/tx';
 
 interface AppShellProps {
   activeTab: NavTab;
@@ -31,8 +38,10 @@ interface AppShellProps {
   onNavigate: (tab: NavTab) => void;
   onSaveProfile: (profile: UserProfile) => void;
   onOpenQuestionById: (qId: string) => void;
+  onSelectTopic?: (topicId: number) => void;
   onStudyTextUploaded: (name: string) => void;
   onOpenTablesDrawer: () => void;
+  allQuestions?: Array<Pick<KitQuestion, 'id' | 'title' | 'topic' | 'section' | 'marks'>>;
   children: React.ReactNode;
 }
 
@@ -60,12 +69,18 @@ export const AppShell: React.FC<AppShellProps> = ({
   onNavigate,
   onSaveProfile,
   onOpenQuestionById,
+  onSelectTopic,
   onStudyTextUploaded,
   onOpenTablesDrawer,
+  allQuestions = [],
   children,
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const [jumpQuery, setJumpQuery] = useState('');
+  const [jumpHighlightIdx, setJumpHighlightIdx] = useState(0);
+  const jumpInputRef = useRef<HTMLInputElement | null>(null);
   const [draftProfile, setDraftProfile] = useState<UserProfile>(appState.profile);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [kitLookupQ, setKitLookupQ] = useState('128');
@@ -73,6 +88,11 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   const planInfo = computeStudyPlanDays(appState.profile, appState);
   const activeLabel = RAIL_LINKS.find((r) => r.id === activeTab)?.label ?? 'Today';
+
+  const jumpTargets = useMemo(
+    () => searchQuickJumpTargets(allQuestions, jumpQuery),
+    [allQuestions, jumpQuery]
+  );
 
   const handleSelectNav = (tab: NavTab) => {
     onNavigate(tab);
@@ -85,42 +105,62 @@ export const AppShell: React.FC<AppShellProps> = ({
     setSettingsOpen(false);
   };
 
+  const executeJumpTarget = (target: QuickJumpTarget) => {
+    if (target.kind === 'question') {
+      onOpenQuestionById(target.id);
+    } else if (target.kind === 'topic' && target.topicId) {
+      if (onSelectTopic) {
+        onSelectTopic(target.topicId);
+      } else {
+        onNavigate('topics');
+      }
+    } else if (target.kind === 'nav' && target.navTab) {
+      onNavigate(target.navTab);
+    }
+    setJumpOpen(false);
+    setJumpQuery('');
+    setJumpHighlightIdx(0);
+  };
+
+  // Global Cmd/Ctrl+K Quick Jump + Escape handling
   useEffect(() => {
-    if (!settingsOpen && !mobileNavOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+    const onGlobalKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setJumpOpen((prev) => !prev);
         setSettingsOpen(false);
         setMobileNavOpen(false);
+        return;
+      }
+      if (e.key === 'Escape') {
+        if (jumpOpen) {
+          e.preventDefault();
+          setJumpOpen(false);
+        } else if (settingsOpen || mobileNavOpen) {
+          setSettingsOpen(false);
+          setMobileNavOpen(false);
+        }
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [settingsOpen, mobileNavOpen]);
+    window.addEventListener('keydown', onGlobalKey);
+    return () => window.removeEventListener('keydown', onGlobalKey);
+  }, [jumpOpen, settingsOpen, mobileNavOpen]);
+
+  useEffect(() => {
+    if (jumpOpen) {
+      setJumpHighlightIdx(0);
+      window.setTimeout(() => jumpInputRef.current?.focus(), 20);
+    }
+  }, [jumpOpen]);
 
   useEffect(() => {
     setDraftProfile(appState.profile);
   }, [appState.profile]);
 
-  const resolveQuickJumpId = (input: string): string => {
-    const raw = input.trim().toUpperCase();
-    if (!raw) return 'Q1';
-    if (/^SPEC-?CASE-?[123]$/.test(raw) || /^SC[123]$/.test(raw)) {
-      const caseNum = raw.replace(/[^\d]/g, '') || '1';
-      return `SPEC-CASE-${caseNum}`;
-    }
-    if (raw.startsWith('SPEC') || /^S\d+$/i.test(raw)) {
-      const specNum = Math.min(33, Math.max(1, Number(raw.replace(/[^\d]/g, '')) || 1));
-      if (specNum >= 16 && specNum <= 20) return 'SPEC-CASE-1';
-      if (specNum >= 21 && specNum <= 25) return 'SPEC-CASE-2';
-      if (specNum >= 26 && specNum <= 30) return 'SPEC-CASE-3';
-      return `SPEC-Q${specNum}`;
-    }
-    const qNum = Math.min(306, Math.max(1, Number(raw.replace(/[^\d]/g, '')) || 1));
-    return `Q${qNum}`;
-  };
+  const quickJumpMatch = resolveQuestionJump(allQuestions, kitLookupQ);
 
   const handleOpenQuickJump = () => {
-    onOpenQuestionById(resolveQuickJumpId(kitLookupQ));
+    onOpenQuestionById(quickJumpMatch.id);
     setSettingsOpen(false);
   };
 
@@ -160,7 +200,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   };
 
   const handleKitLookup = async () => {
-    const targetId = resolveQuickJumpId(kitLookupQ);
+    const targetId = quickJumpMatch.id;
     setKitLookupResult('Searching Exam Kit PDF...');
     try {
       const res = await fetch(`/api/kit/lookup?q=${encodeURIComponent(targetId)}`);
@@ -442,8 +482,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <div className="flex flex-wrap gap-2">
                   <input
                     type="text"
-                    aria-label="Jump to question number"
-                    placeholder="e.g. 128, SPEC-Q33, SPEC-CASE-2"
+                    aria-label="Jump to question number or keyword"
+                    placeholder="e.g. 128, Sheldon, SPEC-Q3, Opal"
                     value={kitLookupQ}
                     onChange={(e) => setKitLookupQ(e.target.value)}
                     onKeyDown={(e) => {
@@ -452,14 +492,14 @@ export const AppShell: React.FC<AppShellProps> = ({
                         handleOpenQuickJump();
                       }
                     }}
-                    className="w-40 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                    className="w-44 rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
                   />
                   <button
                     type="button"
                     onClick={handleOpenQuickJump}
                     className="rounded-lg bg-[#0F5132] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
                   >
-                    Open {resolveQuickJumpId(kitLookupQ)} →
+                    Open {quickJumpMatch.id} →
                   </button>
                   <button
                     type="button"
@@ -469,6 +509,11 @@ export const AppShell: React.FC<AppShellProps> = ({
                     Read PDF
                   </button>
                 </div>
+                {quickJumpMatch.matchedByKeyword && (
+                  <p className="font-mono text-[11px] text-[#0F5132] dark:text-emerald-400">
+                    Matched: {quickJumpMatch.label}
+                  </p>
+                )}
                 {kitLookupResult && (
                   <p className="max-h-32 overflow-y-auto rounded-lg border border-[#E6E4DD] bg-[#FAF9F6] p-2.5 text-xs text-neutral-700 dark:border-[#262C36] dark:bg-[#0D1117] dark:text-neutral-300">
                     {kitLookupResult}
@@ -517,6 +562,111 @@ export const AppShell: React.FC<AppShellProps> = ({
         </div>
       )}
 
+      {/* Global Quick Jump Palette (Cmd/Ctrl+K) */}
+      {jumpOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Quick Jump to Question, Topic, or FA25 Revision"
+          onClick={() => setJumpOpen(false)}
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 px-4 pt-16 sm:pt-24 backdrop-blur-[1px]"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="tax-card-enter w-full max-w-xl overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white shadow-2xl dark:border-[#262C36] dark:bg-[#161B22]"
+          >
+            <div className="flex items-center gap-2.5 border-b border-[#EFECE4] px-4 py-3 dark:border-[#262C36]">
+              <Search className="h-4 w-4 shrink-0 text-[#0F5132] dark:text-emerald-400" />
+              <input
+                ref={jumpInputRef}
+                type="text"
+                aria-label="Quick jump search"
+                value={jumpQuery}
+                onChange={(e) => {
+                  setJumpQuery(e.target.value);
+                  setJumpHighlightIdx(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (jumpTargets.length > 0) {
+                      setJumpHighlightIdx((idx) => (idx + 1) % jumpTargets.length);
+                    }
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (jumpTargets.length > 0) {
+                      setJumpHighlightIdx(
+                        (idx) => (idx - 1 + jumpTargets.length) % jumpTargets.length
+                      );
+                    }
+                  } else if (e.key === 'Enter' && jumpTargets.length > 0) {
+                    e.preventDefault();
+                    executeJumpTarget(jumpTargets[jumpHighlightIdx] ?? jumpTargets[0]);
+                  }
+                }}
+                placeholder="Jump to Q#, Specimen (sc2), topic, or FA25 hub..."
+                className="w-full bg-transparent text-sm text-[#14171A] placeholder:text-neutral-400 focus:outline-none dark:text-[#F0F3F6]"
+              />
+              <button
+                type="button"
+                aria-label="Close quick jump"
+                onClick={() => setJumpOpen(false)}
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-80 divide-y divide-[#EFECE4] overflow-y-auto dark:divide-[#262C36]">
+              {jumpTargets.length === 0 ? (
+                <p className="px-4 py-6 text-center text-xs text-neutral-500 dark:text-neutral-400">
+                  No matching Kit questions, topics, or sections found.
+                </p>
+              ) : (
+                jumpTargets.map((item, idx) => {
+                  const active = idx === jumpHighlightIdx;
+                  return (
+                    <button
+                      key={`${item.kind}-${item.id}`}
+                      type="button"
+                      onMouseEnter={() => setJumpHighlightIdx(idx)}
+                      onClick={() => executeJumpTarget(item)}
+                      className={`tax-study-row flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left ${
+                        active ? 'bg-[#F4F1E8] dark:bg-[#1B222D]' : ''
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded border border-[#D4DFD7] bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase text-[#0F5132] dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-300">
+                            {item.kind === 'question'
+                              ? 'Question'
+                              : item.kind === 'topic'
+                              ? 'Topic'
+                              : 'Hub'}
+                          </span>
+                          <span className="truncate text-xs sm:text-sm font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                            {item.title}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate text-[11px] text-neutral-500 dark:text-neutral-400">
+                          {item.subtitle}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#0F5132] dark:text-emerald-400" />
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-[#EFECE4] bg-[#FAF9F6] px-4 py-2 font-mono text-[11px] text-neutral-500 dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-400">
+              <span>↑↓ navigate · Enter open</span>
+              <span>Esc close</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Workspace Column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Clean Contextual Top Bar (<= 56px mobile height, 3-zone contract) */}
@@ -554,6 +704,18 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label="Open quick jump palette"
+              onClick={() => setJumpOpen(true)}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#161B22] dark:text-neutral-200 dark:hover:bg-[#1C222B]"
+            >
+              <Search className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" />
+              <span className="hidden sm:inline">Jump</span>
+              <span className="hidden rounded border border-[#E6E4DD] px-1 font-mono text-[10px] text-neutral-400 md:inline dark:border-[#303846]">
+                ⌘K
+              </span>
+            </button>
             <button
               type="button"
               onClick={onOpenTablesDrawer}

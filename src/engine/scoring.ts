@@ -95,6 +95,97 @@ export function gradeSubItem(
   };
 }
 
+export interface WrongAnswerSubFeedback {
+  subNum: number;
+  marks: number;
+  correct: boolean;
+  userSummary: string;
+  correctSummary: string;
+  explanation: string;
+}
+
+export interface WrongAnswerFeedback {
+  isWrongOrPartial: boolean;
+  userSummary: string;
+  correctSummary: string;
+  explanation: string;
+  trapNote: string;
+  distractorNote: string;
+  subFeedbacks: WrongAnswerSubFeedback[];
+}
+
+export function formatRichAnswer(
+  interaction: string,
+  options: unknown,
+  val: unknown
+): string {
+  if (val === undefined || val === null) return 'Not answered';
+
+  if (interaction === 'numeric_input') {
+    const num = normalizeNum(val);
+    if (num !== null) return `£${num.toLocaleString()}`;
+    const raw = String(val).trim();
+    return raw ? raw : 'Not answered';
+  }
+
+  if (interaction === 'single_mcq' || interaction === 'grid_2x2') {
+    const key = String(val ?? '').trim();
+    if (!key) return 'Not answered';
+    const opts = Array.isArray(options) ? (options as Array<{ key: string; text: string }>) : [];
+    const found = opts.find((o) => normalizeStr(o.key) === normalizeStr(key));
+    return found ? `${found.key} — ${found.text}` : key;
+  }
+
+  if (interaction === 'multi_select') {
+    const keys = Array.isArray(val) ? val.map((x) => String(x).trim()).filter(Boolean) : [];
+    if (keys.length === 0) return 'Not answered';
+    const opts = Array.isArray(options) ? (options as Array<{ key: string; text: string }>) : [];
+    return keys
+      .map((k) => {
+        const found = opts.find((o) => normalizeStr(o.key) === normalizeStr(k));
+        return found ? `${found.key} — ${found.text}` : k;
+      })
+      .join(' · ');
+  }
+
+  if (interaction === 'matrix') {
+    const mat =
+      options && typeof options === 'object' && !Array.isArray(options)
+        ? (options as { rows?: string[] })
+        : { rows: [] };
+    const obj = (val && typeof val === 'object' && !Array.isArray(val) ? val : {}) as Record<
+      string,
+      string[]
+    >;
+    const rowCount = mat.rows?.length ?? Object.keys(obj).length;
+    if (rowCount === 0) return 'Not answered';
+    const parts: string[] = [];
+    let anySelected = false;
+    for (let i = 0; i < rowCount; i++) {
+      const chosen = obj[String(i)] ?? [];
+      if (chosen.length > 0) anySelected = true;
+      const label = mat.rows?.[i] ? `Row ${i + 1} (${mat.rows[i]})` : `Row ${i + 1}`;
+      parts.push(`${label}: ${chosen.length > 0 ? chosen.join(', ') : 'None'}`);
+    }
+    return anySelected ? parts.join(' · ') : 'Not answered';
+  }
+
+  if (interaction === 'pair_dropdown') {
+    const groups = Array.isArray(options) ? (options as Array<{ group: string }>) : [];
+    const arr = Array.isArray(val) ? val.map((x) => String(x ?? '').trim()) : [];
+    if (!arr.some(Boolean)) return 'Not answered';
+    if (groups.length > 0) {
+      return groups
+        .map((g, idx) => `${g.group}: ${arr[idx] || '—'}`)
+        .join(' · ');
+    }
+    return arr.map((x) => x || '—').join(' | ');
+  }
+
+  const raw = String(val).trim();
+  return raw || 'Not answered';
+}
+
 export function gradeQuestion(question: KitQuestion, userAnswer: UserQuestionAnswer | null | undefined): GradedResult {
   if (question.type === 'cr') {
     return {
@@ -140,6 +231,59 @@ export function gradeQuestion(question: KitQuestion, userAnswer: UserQuestionAns
     isFullyCorrect: single.correct,
     correctDisplay: single.expectedDisplay,
     userDisplay: single.userDisplay,
+  };
+}
+
+export function buildWrongAnswerFeedback(
+  question: KitQuestion,
+  graded: GradedResult,
+  userAnswer: UserQuestionAnswer | null | undefined
+): WrongAnswerFeedback {
+  const isWrongOrPartial = graded.isAutoGraded && !graded.isFullyCorrect;
+
+  if (question.type === 'case') {
+    const subs = question.options as CaseSubQuestion[];
+    const userArr = Array.isArray(userAnswer) ? userAnswer : [];
+    const subFeedbacks: WrongAnswerSubFeedback[] = subs.map((sq, idx) => {
+      const sr = graded.subResults?.[idx];
+      return {
+        subNum: sq.sub_num,
+        marks: sq.marks,
+        correct: sr ? sr.correct : false,
+        userSummary: formatRichAnswer(sq.interaction, sq.options, userArr[idx]),
+        correctSummary: formatRichAnswer(sq.interaction, sq.options, sq.correct_answer),
+        explanation: sq.worked_solution,
+      };
+    });
+
+    return {
+      isWrongOrPartial,
+      userSummary: subFeedbacks.map((s) => `OT${s.subNum}: ${s.userSummary}`).join(' · '),
+      correctSummary: subFeedbacks.map((s) => `OT${s.subNum}: ${s.correctSummary}`).join(' · '),
+      explanation: question.full_worked_solution,
+      trapNote: question.examiner_debrief.trap_of_question,
+      distractorNote: question.examiner_debrief.distractor_forensics,
+      subFeedbacks,
+    };
+  }
+
+  const userSummary =
+    question.type === 'cr'
+      ? graded.userDisplay
+      : formatRichAnswer(question.interaction, question.options, userAnswer);
+  const correctSummary =
+    question.type === 'cr'
+      ? graded.correctDisplay
+      : formatRichAnswer(question.interaction, question.options, question.correct_answer);
+
+  return {
+    isWrongOrPartial,
+    userSummary,
+    correctSummary,
+    explanation: question.full_worked_solution,
+    trapNote: question.examiner_debrief.trap_of_question,
+    distractorNote: question.examiner_debrief.distractor_forensics,
+    subFeedbacks: [],
   };
 }
 

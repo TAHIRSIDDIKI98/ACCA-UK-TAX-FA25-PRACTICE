@@ -91,12 +91,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Left: Primary Study Mission */}
         <div className="flex flex-col justify-between rounded-2xl border border-[#E6E4DD] bg-white p-6 sm:p-7 lg:col-span-7 dark:border-[#262C36] dark:bg-[#161B22]">
           <div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
               <span className="font-mono font-semibold text-[#0F5132] dark:text-emerald-400">
-                {EXAM_CARD.financeAct}
+                FA25 (2025/26)
               </span>
               <span aria-hidden="true">·</span>
-              <span className="font-mono tabular-nums">{planInfo.daysUntilExam} days to sitting</span>
+              <span className="font-mono tabular-nums">{planInfo.daysUntilExam}d to exam</span>
               <span aria-hidden="true">·</span>
               <span>{recommended.kicker}</span>
             </div>
@@ -262,7 +262,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div
                 key={head.area}
-                className="flex flex-col justify-between rounded-2xl border border-[#E6E4DD] bg-white p-5 dark:border-[#262C36] dark:bg-[#161B22]"
+                className="flex flex-col justify-between rounded-2xl border border-[#E6E4DD] bg-white p-5 transition-[border-color,box-shadow] duration-200 hover:border-[#D4D0C4] hover:shadow-[0_10px_24px_-14px_rgba(20,23,26,0.12)] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:border-[#343C4A] dark:hover:shadow-[0_12px_24px_-14px_rgba(0,0,0,0.5)]"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -282,8 +282,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {/* Clean progress rule */}
                   <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#EFECE4] dark:bg-[#262C36]">
                     <div
-                      className="h-full bg-[#0F5132] dark:bg-emerald-500 transition-all"
-                      style={{ width: `${Math.max(3, head.averageMastery)}%` }}
+                      className="h-full bg-[#0F5132] dark:bg-emerald-500 transition-all duration-300"
+                      style={{
+                        width: `${head.averageMastery > 0 ? Math.max(4, head.averageMastery) : 0}%`,
+                      }}
                     />
                   </div>
 
@@ -373,7 +375,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               return (
                 <div
                   key={item.topicId}
-                  className="flex items-center justify-between gap-3 py-3"
+                  className="tax-study-row -mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-3"
                 >
                   <div className="min-w-0">
                     <button
@@ -469,10 +471,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <th className="py-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
+              <tbody className="[&>tr:not(:first-child)>td]:border-t [&>tr:not(:first-child)>td]:border-[#EFECE4] dark:[&>tr:not(:first-child)>td]:border-[#262C36]">
                 {KIT_INDEX_SUMMARY.map((row) => (
-                  <tr key={row.area}>
-                    <td className="py-2 pr-4 font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                  <tr key={row.area} className="tax-study-row">
+                    <td className="py-2 pl-2 pr-4 font-semibold text-[#14171A] dark:text-[#F0F3F6]">
                       {row.area}
                     </td>
                     <td className="py-2 pr-4 font-mono text-neutral-600 dark:text-neutral-300 tabular-nums">
@@ -481,7 +483,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <td className="py-2 pr-4 font-mono text-neutral-500 dark:text-neutral-400">
                       Q {row.qPages} · A {row.aPages}
                     </td>
-                    <td className="py-2 font-semibold text-[#0F5132] dark:text-emerald-400">
+                    <td className="py-2 pr-2 font-semibold text-[#0F5132] dark:text-emerald-400">
                       {row.loadedInBank ? 'Loaded in Bank' : 'On-disk PDF'}
                     </td>
                   </tr>

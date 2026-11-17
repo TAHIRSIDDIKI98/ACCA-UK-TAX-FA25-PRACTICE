@@ -581,3 +581,228 @@ export function getRecommendedNextAction(
   };
 }
 
+const INTERACTION_LABELS: Record<string, string> = {
+  single_mcq: 'Single MCQ',
+  grid_2x2: '2×2 Grid',
+  numeric_input: 'Numeric (£)',
+  pair_dropdown: 'Dropdown Match',
+  multi_select: 'Multi-Select',
+  matrix: 'Matrix',
+  constructed_response: 'Constructed Response',
+};
+
+export function formatInteractionLabel(interaction: string): string {
+  if (INTERACTION_LABELS[interaction]) return INTERACTION_LABELS[interaction];
+  return interaction
+    .split('_')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+export interface QuestionJumpResolution {
+  id: string;
+  label: string;
+  matchedByKeyword: boolean;
+}
+
+export function resolveQuestionJump(
+  allQuestions: Array<Pick<KitQuestion, 'id' | 'title' | 'topic'>>,
+  query: string
+): QuestionJumpResolution {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return { id: 'Q1', label: 'Q1', matchedByKeyword: false };
+  }
+  const upper = trimmed.toUpperCase();
+
+  // Exact ID match (e.g. Q128, SPEC-Q3, SPEC-CASE-2)
+  const exact = allQuestions.find((q) => q.id.toUpperCase() === upper);
+  if (exact) {
+    return { id: exact.id, label: exact.id, matchedByKeyword: false };
+  }
+
+  // Specimen shorthand (SPEC-CASE-2, SC2, S3, SPEC15, etc.)
+  if (/^SPEC-?CASE-?[123]$/.test(upper) || /^SC[123]$/.test(upper)) {
+    const caseNum = upper.replace(/[^\d]/g, '') || '1';
+    const id = `SPEC-CASE-${caseNum}`;
+    return { id, label: id, matchedByKeyword: false };
+  }
+  if (/^(?:SPEC(?:-?Q)?|S)\d+$/.test(upper)) {
+    const specNum = Math.min(33, Math.max(1, Number(upper.replace(/[^\d]/g, '')) || 1));
+    const id =
+      specNum >= 16 && specNum <= 20
+        ? 'SPEC-CASE-1'
+        : specNum >= 21 && specNum <= 25
+        ? 'SPEC-CASE-2'
+        : specNum >= 26 && specNum <= 30
+        ? 'SPEC-CASE-3'
+        : `SPEC-Q${specNum}`;
+    return { id, label: id, matchedByKeyword: false };
+  }
+
+  // Pure numeric or Q-prefixed numeric shorthand (128, Q128)
+  if (/^Q?\d+$/.test(upper)) {
+    const qNum = Math.min(306, Math.max(1, Number(upper.replace(/[^\d]/g, '')) || 1));
+    const id = `Q${qNum}`;
+    return { id, label: id, matchedByKeyword: false };
+  }
+
+  // Keyword lookup across question title & topic (e.g. "Sheldon", "Opal", "chattels")
+  const lower = trimmed.toLowerCase();
+  const titleMatch =
+    allQuestions.find((q) => q.title.toLowerCase().includes(lower)) ??
+    allQuestions.find((q) => q.topic.toLowerCase().includes(lower));
+  if (titleMatch) {
+    return {
+      id: titleMatch.id,
+      label: `${titleMatch.id} · ${titleMatch.title.replace(/^KIT\s+\w+\s*/, '')}`,
+      matchedByKeyword: true,
+    };
+  }
+
+  return { id: 'Q1', label: 'Q1 (default)', matchedByKeyword: false };
+}
+
+export interface QuickJumpTarget {
+  kind: 'question' | 'topic' | 'nav';
+  id: string;
+  title: string;
+  subtitle: string;
+  topicId?: number;
+  navTab?: 'overview' | 'topics' | 'player' | 'mock' | 'mistakes' | 'tables';
+}
+
+const WORKSPACE_JUMP_ITEMS: QuickJumpTarget[] = [
+  {
+    kind: 'nav',
+    id: 'nav-tables',
+    title: 'FA25 Complete Revision Hub & Tax Tables',
+    subtitle: 'Rates, allowances, live checkers, worked examples & deadlines',
+    navTab: 'tables',
+  },
+  {
+    kind: 'nav',
+    id: 'nav-mock',
+    title: 'Timed CBE Mock Exam Builder',
+    subtitle: '100-mark Specimen CBE, 5-Q Rapid & custom area mocks',
+    navTab: 'mock',
+  },
+  {
+    kind: 'nav',
+    id: 'nav-mistakes',
+    title: 'Revision Clinic, SRS & Memory Vault',
+    subtitle: '1/3/7d Mistake Bank, 14-Trap Ledger, Confusion Clinic & Deck',
+    navTab: 'mistakes',
+  },
+  {
+    kind: 'nav',
+    id: 'nav-topics',
+    title: '24-Topic Syllabus Handbook',
+    subtitle: 'Phase-1 law & proformas + 4-tier adaptive practice ladder',
+    navTab: 'topics',
+  },
+];
+
+export function searchQuickJumpTargets(
+  allQuestions: Array<Pick<KitQuestion, 'id' | 'title' | 'topic' | 'section' | 'marks'>>,
+  query: string
+): QuickJumpTarget[] {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    const curatedQIds = ['Q27', 'Q101', 'Q256', 'SPEC-Q31', 'SPEC-CASE-2'];
+    const curatedQuestions: QuickJumpTarget[] = [];
+    for (const qId of curatedQIds) {
+      const q = allQuestions.find((item) => item.id === qId);
+      if (q) {
+        curatedQuestions.push({
+          kind: 'question',
+          id: q.id,
+          title: `${q.id} · ${q.title.replace(/^KIT\s+\w+\s*/, '')}`,
+          subtitle: `Sec ${q.section} · ${q.marks}m · ${q.topic}`,
+        });
+      }
+    }
+    const curatedTopics: QuickJumpTarget[] = [2, 5, 13]
+      .map((tid) => TOPICS.find((t) => t.id === tid))
+      .filter((t): t is NonNullable<typeof t> => Boolean(t))
+      .map((t) => ({
+        kind: 'topic',
+        id: `T${t.id}`,
+        title: `Topic ${t.id}: ${t.title}`,
+        subtitle: `${t.syllabusArea} · ${t.extractedCount} questions · ${t.kitRange}`,
+        topicId: t.id,
+      }));
+    return [...curatedQuestions.slice(0, 4), ...curatedTopics.slice(0, 2), WORKSPACE_JUMP_ITEMS[0]];
+  }
+
+  const lower = trimmed.toLowerCase();
+  const results: QuickJumpTarget[] = [];
+  const seenQuestionIds = new Set<string>();
+
+  const resolved = resolveQuestionJump(allQuestions, trimmed);
+  const looksLikeIdQuery =
+    /^(?:Q?\d+|SPEC(?:-?CASE)?-?\d+|SC\d+|S\d+)$/i.test(trimmed);
+  if (looksLikeIdQuery || resolved.matchedByKeyword) {
+    const q = allQuestions.find((item) => item.id === resolved.id);
+    if (q) {
+      seenQuestionIds.add(q.id);
+      results.push({
+        kind: 'question',
+        id: q.id,
+        title: `${q.id} · ${q.title.replace(/^KIT\s+\w+\s*/, '')}`,
+        subtitle: `Sec ${q.section} · ${q.marks}m · ${q.topic}`,
+      });
+    }
+  }
+
+  for (const q of allQuestions) {
+    if (results.length >= 6) break;
+    if (seenQuestionIds.has(q.id)) continue;
+    if (
+      q.id.toLowerCase().includes(lower) ||
+      q.title.toLowerCase().includes(lower) ||
+      q.topic.toLowerCase().includes(lower)
+    ) {
+      seenQuestionIds.add(q.id);
+      results.push({
+        kind: 'question',
+        id: q.id,
+        title: `${q.id} · ${q.title.replace(/^KIT\s+\w+\s*/, '')}`,
+        subtitle: `Sec ${q.section} · ${q.marks}m · ${q.topic}`,
+      });
+    }
+  }
+
+  let topicHits = 0;
+  for (const t of TOPICS) {
+    if (topicHits >= 4) break;
+    const topicCode = `topic ${t.id}`;
+    if (
+      topicCode.includes(lower) ||
+      `t${t.id}` === lower ||
+      t.title.toLowerCase().includes(lower) ||
+      t.syllabusArea.toLowerCase().includes(lower)
+    ) {
+      topicHits++;
+      results.push({
+        kind: 'topic',
+        id: `T${t.id}`,
+        title: `Topic ${t.id}: ${t.title}`,
+        subtitle: `${t.syllabusArea} · ${t.extractedCount} questions · ${t.kitRange}`,
+        topicId: t.id,
+      });
+    }
+  }
+
+  for (const nav of WORKSPACE_JUMP_ITEMS) {
+    if (
+      nav.title.toLowerCase().includes(lower) ||
+      nav.subtitle.toLowerCase().includes(lower)
+    ) {
+      results.push(nav);
+    }
+  }
+
+  return results.slice(0, 10);
+}

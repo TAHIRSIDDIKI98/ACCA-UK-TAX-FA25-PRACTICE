@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -8,9 +8,12 @@ import {
   ChevronUp,
   Clock,
   ExternalLink,
+  Eye,
+  EyeOff,
   Search,
   SlidersHorizontal,
   Sparkles,
+  X,
 } from 'lucide-react';
 import {
   FA25_REVISION_MODULES,
@@ -23,6 +26,10 @@ import {
   calculateCarAndFuelBenefit,
   calculateChattelGain,
   calculateCorporationTax,
+  calculateIhtLifetimeAndDeath2526,
+  calculateNic2526,
+  calculatePensionAnnualAllowance2526,
+  calculateVatRegistrationAndFrs2526,
 } from '../engine/taxCalculators';
 
 export interface FA25TaxTablesProps {
@@ -90,9 +97,40 @@ const MODULE_QUESTION_REFS: Record<string, { qId: string; label: string }[]> = {
   ],
 };
 
+const CHECKER_TILE_CLASS =
+  'rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#0F5132]/40 hover:shadow-[0_6px_14px_-6px_rgba(15,81,50,0.16)] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:border-emerald-500/40 dark:hover:shadow-[0_8px_16px_-6px_rgba(0,0,0,0.45)]';
+
+const CHECKER_ACCENT_TILE_CLASS =
+  'rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-[#0F5132]/60 hover:shadow-[0_6px_16px_-6px_rgba(15,81,50,0.22)] dark:border-emerald-800 dark:bg-emerald-950/40 dark:hover:border-emerald-500/60 dark:hover:shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)]';
+
 function fmtGbp(n: number): string {
   const sign = n < 0 ? '-' : '';
   return `${sign}£${Math.abs(Math.round(n)).toLocaleString('en-GB')}`;
+}
+
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return <>{text}</>;
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escaped})`, 'gi');
+  const parts = text.split(re);
+  if (parts.length <= 1) return <>{text}</>;
+  return (
+    <>
+      {parts.map((part, idx) =>
+        idx % 2 === 1 ? (
+          <mark
+            key={idx}
+            className="rounded bg-amber-200/80 px-0.5 text-[#14171A] dark:bg-amber-500/30 dark:text-amber-100"
+          >
+            {part}
+          </mark>
+        ) : (
+          <React.Fragment key={idx}>{part}</React.Fragment>
+        )
+      )}
+    </>
+  );
 }
 
 const CarBenefitChecker: React.FC = () => {
@@ -222,7 +260,7 @@ const CarBenefitChecker: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className={CHECKER_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Adj. List Price
           </span>
@@ -230,7 +268,7 @@ const CarBenefitChecker: React.FC = () => {
             {fmtGbp(effectivePrice)}
           </p>
         </div>
-        <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className={CHECKER_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Car Benefit ({res.percentage}%)
           </span>
@@ -238,7 +276,7 @@ const CarBenefitChecker: React.FC = () => {
             {fmtGbp(res.carBenefit)}
           </p>
         </div>
-        <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className={CHECKER_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Fuel (£28,200 × %)
           </span>
@@ -246,7 +284,7 @@ const CarBenefitChecker: React.FC = () => {
             {fmtGbp(res.fuelBenefit)}
           </p>
         </div>
-        <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-950/40">
+        <div className={CHECKER_ACCENT_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F5132] dark:text-emerald-300">
             Total BIK · Class 1A (15%)
           </span>
@@ -385,7 +423,7 @@ const CapitalAllowanceChecker: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
-        <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className={CHECKER_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             AIA (SRP First)
           </span>
@@ -393,7 +431,7 @@ const CapitalAllowanceChecker: React.FC = () => {
             {fmtGbp(res.aiaClaimed)}
           </p>
         </div>
-        <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className={CHECKER_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             FE 100% + SRP 50%
           </span>
@@ -401,7 +439,7 @@ const CapitalAllowanceChecker: React.FC = () => {
             {fmtGbp(res.mainFullExpensing + res.srpFya50)}
           </p>
         </div>
-        <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className={CHECKER_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Car FYA / Pool WDA
           </span>
@@ -409,7 +447,7 @@ const CapitalAllowanceChecker: React.FC = () => {
             {fmtGbp(res.carFya100 + res.mainWda + res.srpWda)}
           </p>
         </div>
-        <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className={CHECKER_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             TWDV c/f (Main/SRP)
           </span>
@@ -417,7 +455,7 @@ const CapitalAllowanceChecker: React.FC = () => {
             {fmtGbp(res.mainCf)} / {fmtGbp(res.srpCf)}
           </p>
         </div>
-        <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-950/40">
+        <div className={CHECKER_ACCENT_TILE_CLASS}>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F5132] dark:text-emerald-300">
             Total Capital Allowances
           </span>
@@ -438,6 +476,27 @@ const QuickThresholdCheckers: React.FC<{ moduleId: string }> = ({ moduleId }) =>
   const [associates, setAssociates] = useState(1);
   const [chattelGp, setChattelGp] = useState(8700);
   const [chattelCost, setChattelCost] = useState(2400);
+
+  const [thIncome, setThIncome] = useState(220000);
+  const [adjIncome, setAdjIncome] = useState(310000);
+  const [aaBf, setAaBf] = useState(20000);
+  const [grossContrib, setGrossContrib] = useState(60000);
+
+  const [empCash, setEmpCash] = useState(45000);
+  const [seProfit, setSeProfit] = useState(55000);
+  const [empAllowance, setEmpAllowance] = useState(true);
+
+  const [ihtTransfer, setIhtTransfer] = useState(531000);
+  const [ihtAe, setIhtAe] = useState(6000);
+  const [ihtYears, setIhtYears] = useState(4.5);
+  const [ihtIsClt, setIhtIsClt] = useState(true);
+  const [ihtDonorPays, setIhtDonorPays] = useState(true);
+
+  const [vat12m, setVat12m] = useState(92000);
+  const [vat30d, setVat30d] = useState(15000);
+  const [vatGrossTurn, setVatGrossTurn] = useState(120000);
+  const [vatFrsPct, setVatFrsPct] = useState(12);
+  const [vatYr1, setVatYr1] = useState(true);
 
   if (moduleId === 'residence-benefits') return <CarBenefitChecker />;
   if (moduleId === 'capital-allowances') return <CapitalAllowanceChecker />;
@@ -473,18 +532,172 @@ const QuickThresholdCheckers: React.FC<{ moduleId: string }> = ({ moduleId }) =>
               className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
             />
           </label>
-          <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+          <div className={CHECKER_TILE_CLASS}>
             <span className="text-[10px] font-semibold uppercase text-neutral-500">ANI · Reduction</span>
             <p className="font-mono text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
               {fmtGbp(pa.ani)} · −{fmtGbp(pa.reduction)}
             </p>
           </div>
-          <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-950/40">
+          <div className={CHECKER_ACCENT_TILE_CLASS}>
             <span className="text-[10px] font-semibold uppercase text-[#0F5132] dark:text-emerald-300">
               Adjusted PA
             </span>
             <p className="font-mono text-sm font-bold text-[#0F5132] dark:text-emerald-300">
               {fmtGbp(pa.personalAllowance)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (moduleId === 'pensions-property-losses') {
+    const aa = calculatePensionAnnualAllowance2526({
+      thresholdIncome: thIncome,
+      adjustedIncome: adjIncome,
+      unusedBfYears: aaBf,
+      grossContribution: grossContrib,
+    });
+    return (
+      <div className="rounded-xl border border-[#C6DDD0] bg-emerald-50/40 p-4 space-y-2.5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-[#0F5132] dark:text-emerald-400" />
+            <h3 className="text-xs sm:text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              Live Pension Annual Allowance &amp; Taper Checker
+            </h3>
+          </div>
+          <span className="font-mono text-[11px] font-semibold text-[#0F5132] dark:text-emerald-300">
+            {aa.isTapered ? 'Tapered (Min £10,000 floor)' : 'Full £60,000 Standard AA'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Threshold Inc (£)
+            <input
+              type="number"
+              step={5000}
+              value={thIncome}
+              onChange={(e) => setThIncome(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Adjusted Inc (£)
+            <input
+              type="number"
+              step={5000}
+              value={adjIncome}
+              onChange={(e) => setAdjIncome(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            3y Unused AA b/f (£)
+            <input
+              type="number"
+              step={1000}
+              value={aaBf}
+              onChange={(e) => setAaBf(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Gross Contrib (£)
+            <input
+              type="number"
+              step={1000}
+              value={grossContrib}
+              onChange={(e) => setGrossContrib(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <div className={CHECKER_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-neutral-500">CY AA · Max w/ c/f</span>
+            <p className="font-mono text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              {fmtGbp(aa.currentYearAa)} · {fmtGbp(aa.maxAvailableWithCf)}
+            </p>
+          </div>
+          <div className={CHECKER_ACCENT_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-[#0F5132] dark:text-emerald-300">
+              AA Excess Charge Base
+            </span>
+            <p className="font-mono text-sm font-bold text-[#0F5132] dark:text-emerald-300">
+              {fmtGbp(aa.excessContribution)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (moduleId === 'nic') {
+    const nic = calculateNic2526({
+      employeeCashEarnings: empCash,
+      selfEmployedTradingProfit: seProfit,
+      employmentAllowanceClaimed: empAllowance,
+    });
+    return (
+      <div className="rounded-xl border border-[#C6DDD0] bg-emerald-50/40 p-4 space-y-2.5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-[#0F5132] dark:text-emerald-400" />
+            <h3 className="text-xs sm:text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              Live Class 1 &amp; Class 4 NIC Checker (2025/26)
+            </h3>
+          </div>
+          <span className="font-mono text-[11px] font-semibold text-[#0F5132] dark:text-emerald-300">
+            Emp 8%/2% · Er 15% &gt; £5k · C4 6%/2%
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Employee Cash (£)
+            <input
+              type="number"
+              step={1000}
+              value={empCash}
+              onChange={(e) => setEmpCash(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Trading Profit (£)
+            <input
+              type="number"
+              step={1000}
+              value={seProfit}
+              onChange={(e) => setSeProfit(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="flex items-center gap-2 pt-4 text-xs font-medium text-[#14171A] dark:text-[#F0F3F6]">
+            <input
+              type="checkbox"
+              checked={empAllowance}
+              onChange={(e) => setEmpAllowance(e.target.checked)}
+              className="h-4 w-4 rounded border-[#D8D4C8] text-[#0F5132]"
+            />
+            EA (£10,500)
+          </label>
+          <div className={CHECKER_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-neutral-500">Class 1 Employee</span>
+            <p className="font-mono text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              {fmtGbp(nic.class1Employee)}
+            </p>
+          </div>
+          <div className={CHECKER_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-neutral-500">Class 1 Employer</span>
+            <p className="font-mono text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              {fmtGbp(nic.class1Employer)}
+            </p>
+          </div>
+          <div className={CHECKER_ACCENT_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-[#0F5132] dark:text-emerald-300">
+              Class 4 NIC
+            </span>
+            <p className="font-mono text-sm font-bold text-[#0F5132] dark:text-emerald-300">
+              {fmtGbp(nic.class4)}
             </p>
           </div>
         </div>
@@ -544,7 +757,7 @@ const QuickThresholdCheckers: React.FC<{ moduleId: string }> = ({ moduleId }) =>
               className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
             />
           </label>
-          <div className="rounded-lg border border-[#E6E4DD] bg-white px-3 py-2 dark:border-[#262C36] dark:bg-[#161B22]">
+          <div className={CHECKER_TILE_CLASS}>
             <span className="text-[10px] font-semibold uppercase text-neutral-500">
               Augmented · Relief
             </span>
@@ -552,7 +765,7 @@ const QuickThresholdCheckers: React.FC<{ moduleId: string }> = ({ moduleId }) =>
               {fmtGbp(ct.augmentedProfits)} · −{fmtGbp(ct.marginalRelief)}
             </p>
           </div>
-          <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-950/40">
+          <div className={CHECKER_ACCENT_TILE_CLASS}>
             <span className="text-[10px] font-semibold uppercase text-[#0F5132] dark:text-emerald-300">
               CT Payable
             </span>
@@ -596,11 +809,195 @@ const QuickThresholdCheckers: React.FC<{ moduleId: string }> = ({ moduleId }) =>
               className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
             />
           </label>
-          <div className="col-span-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-950/40">
+          <div className={`col-span-2 ${CHECKER_ACCENT_TILE_CLASS}`}>
             <span className="text-[10px] font-semibold uppercase text-[#0F5132] dark:text-emerald-300">
               Chargeable Gain: {fmtGbp(ch.chargeableGain)}
             </span>
             <p className="font-mono text-xs text-[#14171A] dark:text-emerald-200">{ch.rule}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (moduleId === 'iht') {
+    const iht = calculateIhtLifetimeAndDeath2526({
+      transferValue: ihtTransfer,
+      aeAvailable: ihtAe,
+      yearsSurvived: ihtYears,
+      isClt: ihtIsClt,
+      donorPaysLifetime: ihtDonorPays,
+    });
+    return (
+      <div className="rounded-xl border border-[#C6DDD0] bg-emerald-50/40 p-4 space-y-2.5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-[#0F5132] dark:text-emerald-400" />
+            <h3 className="text-xs sm:text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              Live IHT CLT Gross-Up &amp; Death Taper Checker
+            </h3>
+          </div>
+          <span className="font-mono text-[11px] font-semibold text-[#0F5132] dark:text-emerald-300">
+            Taper Relief: {iht.taperReliefPct}% · NRB {fmtGbp(iht.nrbRemaining)}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-7">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Transfer Type
+            <select
+              value={ihtIsClt ? 'clt' : 'pet'}
+              onChange={(e) => setIhtIsClt(e.target.value === 'clt')}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2 py-1.5 text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            >
+              <option value="clt">CLT (Trust)</option>
+              <option value="pet">PET (Individual)</option>
+            </select>
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Gift Value (£)
+            <input
+              type="number"
+              step={5000}
+              value={ihtTransfer}
+              onChange={(e) => setIhtTransfer(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            AE Used (£)
+            <input
+              type="number"
+              step={3000}
+              min={0}
+              max={6000}
+              value={ihtAe}
+              onChange={(e) => setIhtAe(Math.min(6000, Math.max(0, Number(e.target.value) || 0)))}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Years to Death
+            <input
+              type="number"
+              step={0.5}
+              min={0}
+              max={10}
+              value={ihtYears}
+              onChange={(e) => setIhtYears(Math.max(0, Number(e.target.value) || 0))}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="flex items-center gap-2 pt-4 text-xs font-medium text-[#14171A] dark:text-[#F0F3F6]">
+            <input
+              type="checkbox"
+              disabled={!ihtIsClt}
+              checked={ihtDonorPays && ihtIsClt}
+              onChange={(e) => setIhtDonorPays(e.target.checked)}
+              className="h-4 w-4 rounded border-[#D8D4C8] text-[#0F5132]"
+            />
+            Donor Pays (25%)
+          </label>
+          <div className={CHECKER_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-neutral-500">
+              Lifetime · Gross Death
+            </span>
+            <p className="font-mono text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              {fmtGbp(iht.lifetimeTax)} · {fmtGbp(iht.grossTransferOnDeath)}
+            </p>
+          </div>
+          <div className={CHECKER_ACCENT_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-[#0F5132] dark:text-emerald-300">
+              Net Death Tax
+            </span>
+            <p className="font-mono text-sm font-bold text-[#0F5132] dark:text-emerald-300">
+              {fmtGbp(iht.netDeathTaxDue)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (moduleId === 'vat-penalties') {
+    const vat = calculateVatRegistrationAndFrs2526({
+      rolling12mTurnover: vat12m,
+      next30dTurnover: vat30d,
+      vatInclusiveTurnover: vatGrossTurn,
+      frsRatePct: vatFrsPct,
+      firstYearDiscount: vatYr1,
+    });
+    return (
+      <div className="rounded-xl border border-[#C6DDD0] bg-emerald-50/40 p-4 space-y-2.5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-[#0F5132] dark:text-emerald-400" />
+            <h3 className="text-xs sm:text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
+              Live VAT Registration (£90k) &amp; Flat Rate Scheme Checker
+            </h3>
+          </div>
+          <span className="font-mono text-[11px] font-semibold text-[#0F5132] dark:text-emerald-300">
+            {vat.registrationRequired ? 'Compulsory Registration Triggered' : 'Below £90,000 Threshold'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Rolling 12m (£)
+            <input
+              type="number"
+              step={1000}
+              value={vat12m}
+              onChange={(e) => setVat12m(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            Next 30d Alone (£)
+            <input
+              type="number"
+              step={1000}
+              value={vat30d}
+              onChange={(e) => setVat30d(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            VAT-Incl. Sales (£)
+            <input
+              type="number"
+              step={5000}
+              value={vatGrossTurn}
+              onChange={(e) => setVatGrossTurn(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+            FRS Rate (%)
+            <input
+              type="number"
+              step={0.5}
+              min={1}
+              max={20}
+              value={vatFrsPct}
+              onChange={(e) => setVatFrsPct(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 font-mono text-xs text-[#14171A] dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+            />
+          </label>
+          <label className="flex items-center gap-2 pt-4 text-xs font-medium text-[#14171A] dark:text-[#F0F3F6]">
+            <input
+              type="checkbox"
+              checked={vatYr1}
+              onChange={(e) => setVatYr1(e.target.checked)}
+              className="h-4 w-4 rounded border-[#D8D4C8] text-[#0F5132]"
+            />
+            Year-1 (−1%)
+          </label>
+          <div className={CHECKER_ACCENT_TILE_CLASS}>
+            <span className="text-[10px] font-semibold uppercase text-[#0F5132] dark:text-emerald-300">
+              FRS Payable ({vat.effectiveFrsRatePct}%)
+            </span>
+            <p className="font-mono text-sm font-bold text-[#0F5132] dark:text-emerald-300">
+              {fmtGbp(vat.frsVatPayable)}
+            </p>
           </div>
         </div>
       </div>
@@ -618,9 +1015,29 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
   const [query, setQuery] = useState('');
   const [activeArea, setActiveArea] = useState<string>('all');
   const [onlyMemorise, setOnlyMemorise] = useState(false);
+  const [selfTestMode, setSelfTestMode] = useState(false);
+  const [revealedRows, setRevealedRows] = useState<Record<string, boolean>>({});
   const [showExamples, setShowExamples] = useState(!compact);
   const [showInteractiveCheckers, setShowInteractiveCheckers] = useState(!compact);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const toggleRevealRow = (key: string) => {
+    setRevealedRows((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  useEffect(() => {
+    if (compact) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [compact]);
 
   const qLower = query.trim().toLowerCase();
 
@@ -752,18 +1169,35 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
   return (
     <div className="space-y-5">
       {/* Interactive Search, Filters & Mode Bar */}
-      <div className="space-y-3 rounded-2xl border border-[#E6E4DD] bg-white p-4 dark:border-[#262C36] dark:bg-[#161B22]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative flex-1">
+      <div className="tax-card-enter space-y-3 rounded-2xl border border-[#E6E4DD] bg-white p-4 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className="flex flex-col gap-3">
+          <div className="relative w-full">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
             <input
+              ref={searchInputRef}
               type="text"
               aria-label="Filter FA25 revision notes, rates, examples, and deadlines"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cross-reference any FA25 rule, rate, example or deadline (e.g. RDE2, Full Expensing, 3/200, chattels, FRS, 60 days)..."
-              className="w-full rounded-xl border border-[#D8D4C8] bg-[#FAF9F6] py-2 pl-9 pr-3 text-sm text-[#14171A] placeholder:text-neutral-400 focus:border-[#0F5132] focus:bg-white focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+              placeholder="Search FA25 rules, rates, examples or deadlines (e.g. RDE2, 3/200, FRS)..."
+              className="w-full rounded-xl border border-[#D8D4C8] bg-[#FAF9F6] py-2 pl-9 pr-10 sm:pr-12 text-sm text-[#14171A] placeholder:text-neutral-400 focus:border-[#0F5132] focus:bg-white focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
             />
+            {query ? (
+              <button
+                type="button"
+                aria-label="Clear FA25 search"
+                onClick={() => setQuery('')}
+                className="absolute right-2.5 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-200/70 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              !compact && (
+                <span className="pointer-events-none absolute right-3 top-2 hidden rounded border border-[#D8D4C8] px-1.5 py-0.5 font-mono text-[10px] text-neutral-400 sm:inline-block dark:border-[#303846]">
+                  /
+                </span>
+              )
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -811,6 +1245,23 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
               Must-Memorise Only ({memoriseCount})
             </button>
 
+            <button
+              type="button"
+              aria-pressed={selfTestMode}
+              onClick={() => {
+                setSelfTestMode((v) => !v);
+                setRevealedRows({});
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                selfTestMode
+                  ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white dark:border-sky-600 dark:bg-sky-600'
+                  : 'border-[#D8D4C8] bg-white text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200'
+              }`}
+            >
+              {selfTestMode ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {selfTestMode ? 'Self-Test Active' : 'Self-Test (Blur Rates)'}
+            </button>
+
             {filteredModules.length > 1 && (
               <button
                 type="button"
@@ -821,13 +1272,15 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
               </button>
             )}
 
-            {(query || onlyMemorise || activeArea !== 'all') && (
+            {(query || onlyMemorise || activeArea !== 'all' || selfTestMode) && (
               <button
                 type="button"
                 onClick={() => {
                   setQuery('');
                   setOnlyMemorise(false);
                   setActiveArea('all');
+                  setSelfTestMode(false);
+                  setRevealedRows({});
                 }}
                 className="px-2 py-1 text-xs font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
               >
@@ -875,6 +1328,11 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {selfTestMode && (
+              <span className="font-mono text-[11px] font-semibold text-[#1E3A5F] dark:text-sky-300">
+                Hover or click blurred values to reveal
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5">
               <span className="rounded border border-[#D4DFD7] bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-[#0F5132] dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-300">
                 CBE
@@ -896,13 +1354,15 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
 
       {/* Syllabus Modules */}
       <div className="space-y-5">
-        {filteredModules.map((mod: Fa25RevisionModule) => {
+        {filteredModules.map((mod: Fa25RevisionModule, modIdx: number) => {
           const isCollapsed = Boolean(collapsedModules[mod.id]);
           const qRefs = MODULE_QUESTION_REFS[mod.id] ?? [];
+          const enterDelay = `${Math.min(modIdx, 7) * 45}ms`;
           return (
             <section
-              key={mod.id}
-              className="overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]"
+              key={`${activeArea}-${onlyMemorise}-${mod.id}`}
+              style={{ '--enter-delay': enterDelay } as React.CSSProperties}
+              className="tax-card-enter overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white transition-[border-color,box-shadow] duration-200 hover:border-[#D4D0C4] hover:shadow-[0_10px_26px_-14px_rgba(20,23,26,0.12)] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:border-[#343C4A] dark:hover:shadow-[0_12px_28px_-14px_rgba(0,0,0,0.55)]"
             >
               {/* Module Header */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EFECE4] bg-[#FAF9F6] px-5 py-3.5 dark:border-[#262C36] dark:bg-[#12161D]">
@@ -925,7 +1385,7 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenTopic(mod.relatedTopicId)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#0F5132] hover:bg-emerald-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#0F5132] transition-colors hover:bg-emerald-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-emerald-300 dark:hover:bg-emerald-950/30"
                     >
                       Practice Topic
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -935,7 +1395,7 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
                     type="button"
                     aria-expanded={!isCollapsed}
                     onClick={() => toggleCollapse(mod.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-300"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-600 transition-colors hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-300"
                   >
                     {isCollapsed ? (
                       <>
@@ -955,42 +1415,69 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
                   {/* Rates & Thresholds Table */}
                   {mod.rates.length > 0 && (
                     <div className="overflow-x-auto rounded-xl border border-[#E6E4DD] dark:border-[#262C36]">
-                      <table className="min-w-full border-collapse text-left text-xs sm:text-sm">
+                      <table className="min-w-full border-separate border-spacing-0 text-left text-xs sm:text-sm">
                         <thead>
-                          <tr className="border-b border-[#E6E4DD] bg-[#FAF9F6] font-mono text-[11px] uppercase tracking-wider text-neutral-500 dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-400">
-                            <th className="px-3.5 py-2 font-semibold">Item / Allowance</th>
-                            <th className="px-3.5 py-2 font-semibold">FA25 Rate / Limit</th>
-                            <th className="px-3.5 py-2 font-semibold">Exam Rule &amp; Watch-out</th>
+                          <tr className="bg-[#FAF9F6] font-mono text-[11px] uppercase tracking-wider text-neutral-500 dark:bg-[#12161D] dark:text-neutral-400">
+                            <th className="border-b border-[#E6E4DD] px-3.5 py-2 font-semibold dark:border-[#262C36]">
+                              Item / Allowance
+                            </th>
+                            <th className="border-b border-[#E6E4DD] px-3.5 py-2 font-semibold dark:border-[#262C36]">
+                              FA25 Rate / Limit
+                            </th>
+                            <th className="border-b border-[#E6E4DD] px-3.5 py-2 font-semibold dark:border-[#262C36]">
+                              Exam Rule &amp; Watch-out
+                            </th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
-                          {mod.rates.map((row, idx) => (
-                            <tr
-                              key={idx}
-                              className="align-top hover:bg-[#FAF9F6]/60 dark:hover:bg-[#12161D]/60"
-                            >
-                              <td className="px-3.5 py-2.5 font-medium text-[#14171A] dark:text-[#F0F3F6]">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span>{row.item}</span>
-                                  <span
-                                    className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
-                                      row.source === 'Memorise'
-                                        ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
-                                        : 'border-[#D4DFD7] bg-emerald-50 text-[#0F5132] dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                    }`}
-                                  >
-                                    {row.source === 'Memorise' ? 'Memorise' : 'CBE'}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-3.5 py-2.5 font-mono text-xs font-bold text-[#0F5132] tabular-nums dark:text-emerald-400">
-                                {row.value}
-                              </td>
-                              <td className="px-3.5 py-2.5 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
-                                {row.rule}
-                              </td>
-                            </tr>
-                          ))}
+                        <tbody className="[&>tr:not(:first-child)>td]:border-t [&>tr:not(:first-child)>td]:border-[#EFECE4] dark:[&>tr:not(:first-child)>td]:border-[#262C36]">
+                          {mod.rates.map((row, idx) => {
+                            const rowKey = `rate-${mod.id}-${idx}`;
+                            const isMasked = selfTestMode && !revealedRows[rowKey];
+                            return (
+                              <tr
+                                key={idx}
+                                className="tax-study-row group align-top"
+                              >
+                                <td className="px-3.5 py-2.5 font-medium text-[#14171A] transition-colors group-hover:text-[#0B3D26] dark:text-[#F0F3F6] dark:group-hover:text-white">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <span>
+                                      <HighlightMatch text={row.item} query={query} />
+                                    </span>
+                                    <span
+                                      className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
+                                        row.source === 'Memorise'
+                                          ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
+                                          : 'border-[#D4DFD7] bg-emerald-50 text-[#0F5132] dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                      }`}
+                                    >
+                                      {row.source === 'Memorise' ? 'Memorise' : 'CBE'}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-3.5 py-2.5 font-mono text-xs font-bold text-[#0F5132] tabular-nums transition-colors group-hover:text-[#0B3D26] dark:text-emerald-400 dark:group-hover:text-emerald-300">
+                                  {selfTestMode ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleRevealRow(rowKey)}
+                                      aria-label={`Reveal rate for ${row.item}`}
+                                      className={`text-left rounded px-1 -mx-1 transition-[filter] duration-150 ${
+                                        isMasked
+                                          ? 'blur-[5px] select-none hover:blur-0 focus-visible:blur-0'
+                                          : ''
+                                      }`}
+                                    >
+                                      <HighlightMatch text={row.value} query={query} />
+                                    </button>
+                                  ) : (
+                                    <HighlightMatch text={row.value} query={query} />
+                                  )}
+                                </td>
+                                <td className="px-3.5 py-2.5 text-xs leading-relaxed text-neutral-600 transition-colors group-hover:text-[#14171A] dark:text-neutral-300 dark:group-hover:text-neutral-100">
+                                  <HighlightMatch text={row.rule} query={query} />
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1004,33 +1491,51 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
                         className="overflow-x-auto rounded-xl border border-[#E6E4DD] dark:border-[#262C36]"
                       >
                         <div className="border-b border-[#EFECE4] bg-[#FAF9F6] px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-600 dark:border-[#262C36] dark:bg-[#12161D] dark:text-neutral-300">
-                          {mat.title}
+                          <HighlightMatch text={mat.title} query={query} />
                         </div>
-                        <table className="min-w-full border-collapse text-left text-xs">
+                        <table className="min-w-full border-separate border-spacing-0 text-left text-xs">
                           <thead>
-                            <tr className="border-b border-[#EFECE4] bg-white font-mono text-[11px] text-neutral-500 dark:border-[#262C36] dark:bg-[#161B22] dark:text-neutral-400">
+                            <tr className="bg-white font-mono text-[11px] text-neutral-500 dark:bg-[#161B22] dark:text-neutral-400">
                               {mat.headers.map((h, hIdx) => (
-                                <th key={hIdx} className="px-3.5 py-2 font-semibold">
+                                <th
+                                  key={hIdx}
+                                  className="border-b border-[#EFECE4] px-3.5 py-2 font-semibold dark:border-[#262C36]"
+                                >
                                   {h}
                                 </th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
+                          <tbody className="[&>tr:not(:first-child)>td]:border-t [&>tr:not(:first-child)>td]:border-[#EFECE4] dark:[&>tr:not(:first-child)>td]:border-[#262C36]">
                             {mat.rows.map((r, rIdx) => (
-                              <tr key={rIdx}>
-                                {r.map((cell, cIdx) => (
-                                  <td
-                                    key={cIdx}
-                                    className={`px-3.5 py-2 ${
-                                      cIdx === 0
-                                        ? 'font-semibold text-[#14171A] dark:text-[#F0F3F6]'
-                                        : 'font-mono text-[#0F5132] dark:text-emerald-300'
-                                    }`}
-                                  >
-                                    {cell}
-                                  </td>
-                                ))}
+                              <tr key={rIdx} className="tax-study-row group">
+                                {r.map((cell, cIdx) => {
+                                  const cellKey = `mat-${mod.id}-${mIdx}-${rIdx}-${cIdx}`;
+                                  const isCellMasked = cIdx > 0 && selfTestMode && !revealedRows[cellKey];
+                                  return (
+                                    <td
+                                      key={cIdx}
+                                      onClick={() => {
+                                        if (cIdx > 0 && selfTestMode) toggleRevealRow(cellKey);
+                                      }}
+                                      className={`tax-study-cell px-3.5 py-2 ${
+                                        cIdx === 0
+                                          ? 'font-semibold text-[#14171A] group-hover:text-[#0B3D26] dark:text-[#F0F3F6] dark:group-hover:text-white'
+                                          : 'font-mono text-[#0F5132] tabular-nums group-hover:text-[#0B3D26] dark:text-emerald-300 dark:group-hover:text-emerald-200'
+                                      }`}
+                                    >
+                                      <span
+                                        className={
+                                          isCellMasked
+                                            ? 'inline-block blur-[5px] select-none transition-[filter] duration-150 hover:blur-0'
+                                            : undefined
+                                        }
+                                      >
+                                        <HighlightMatch text={cell} query={query} />
+                                      </span>
+                                    </td>
+                                  );
+                                })}
                               </tr>
                             ))}
                           </tbody>
@@ -1051,30 +1556,33 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
                       {mod.workedExamples.map((ex, eIdx) => (
                         <div
                           key={eIdx}
-                          className="flex flex-col justify-between rounded-xl border border-[#D4DFD7] bg-[#FAF9F6] p-4 dark:border-emerald-900/40 dark:bg-[#0D1117]"
+                          style={{
+                            '--enter-delay': `${Math.min(eIdx, 4) * 50 + 60}ms`,
+                          } as React.CSSProperties}
+                          className="tax-card-enter flex flex-col justify-between rounded-xl border border-[#D4DFD7] bg-[#FAF9F6] p-4 transition-[transform,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#0F5132]/45 hover:shadow-[0_10px_24px_-10px_rgba(15,81,50,0.16)] dark:border-emerald-900/40 dark:bg-[#0D1117] dark:hover:border-emerald-700/60 dark:hover:shadow-[0_12px_24px_-10px_rgba(0,0,0,0.55)]"
                         >
                           <div className="space-y-2.5">
                             <div className="flex items-start gap-2">
                               <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-[#0F5132] dark:text-emerald-400" />
                               <h3 className="text-xs sm:text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
-                                {ex.title}
+                                <HighlightMatch text={ex.title} query={query} />
                               </h3>
                             </div>
                             <p className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
-                              {ex.scenario}
+                              <HighlightMatch text={ex.scenario} query={query} />
                             </p>
                             <div className="overflow-hidden rounded-lg border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]">
                               <div className="divide-y divide-[#F0EEE8] dark:divide-[#262C36]">
                                 {ex.steps.map((st, sIdx) => (
                                   <div
                                     key={sIdx}
-                                    className="grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] sm:text-xs"
+                                    className="tax-study-row group grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] sm:text-xs"
                                   >
-                                    <span className="col-span-5 font-medium text-neutral-600 dark:text-neutral-400">
-                                      {st.label}
+                                    <span className="col-span-5 font-medium text-neutral-600 transition-colors group-hover:text-[#14171A] dark:text-neutral-400 dark:group-hover:text-neutral-200">
+                                      <HighlightMatch text={st.label} query={query} />
                                     </span>
-                                    <span className="col-span-7 font-mono text-[#14171A] dark:text-[#E5E9F0]">
-                                      {st.calc}
+                                    <span className="col-span-7 font-mono text-[#14171A] transition-colors group-hover:text-[#0F5132] dark:text-[#E5E9F0] dark:group-hover:text-emerald-300">
+                                      <HighlightMatch text={st.calc} query={query} />
                                     </span>
                                   </div>
                                 ))}
@@ -1084,10 +1592,10 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
 
                           <div className="mt-3 space-y-2">
                             <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 font-mono text-xs font-bold text-[#0F5132] dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                              {ex.answer}
+                              <HighlightMatch text={ex.answer} query={query} />
                             </div>
                             <p className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-300">
-                              <strong>Trap guard:</strong> {ex.trapNote}
+                              <strong>Trap guard:</strong> <HighlightMatch text={ex.trapNote} query={query} />
                             </p>
                           </div>
                         </div>
@@ -1106,13 +1614,15 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
                           </div>
                           <ul className="space-y-1 text-xs leading-relaxed text-amber-950/90 dark:text-amber-200/90">
                             {mod.examTraps.map((trap, tIdx) => (
-                              <li key={tIdx}>• {trap}</li>
+                              <li key={tIdx}>
+                                • <HighlightMatch text={trap} query={query} />
+                              </li>
                             ))}
                           </ul>
                         </>
                       )}
 
-                      {onOpenQuestionById && !compact && qRefs.length > 0 && (
+                      {onOpenQuestionById && qRefs.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1.5 border-t border-amber-200/70 pt-2 dark:border-amber-900/40">
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-900/80 dark:text-amber-300/80">
                             Try in Practice Studio:
@@ -1149,35 +1659,55 @@ export const FA25TaxTables: React.FC<FA25TaxTablesProps> = ({
             </h2>
           </div>
           <div className={compact ? 'space-y-4' : 'grid grid-cols-1 gap-5 lg:grid-cols-2'}>
-            {filteredDeadlines.map((grp) => (
+            {filteredDeadlines.map((grp, grpIdx) => (
               <div
-                key={grp.id}
-                className="overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white dark:border-[#262C36] dark:bg-[#161B22]"
+                key={`${activeArea}-${onlyMemorise}-${grp.id}`}
+                style={{ '--enter-delay': `${Math.min(grpIdx, 6) * 50}ms` } as React.CSSProperties}
+                className="tax-card-enter overflow-hidden rounded-2xl border border-[#E6E4DD] bg-white transition-[border-color,box-shadow] duration-200 hover:border-[#D4D0C4] hover:shadow-[0_10px_24px_-14px_rgba(20,23,26,0.12)] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:border-[#343C4A] dark:hover:shadow-[0_12px_24px_-14px_rgba(0,0,0,0.5)]"
               >
                 <div className="flex items-center justify-between border-b border-[#EFECE4] bg-[#FAF9F6] px-4 py-3 dark:border-[#262C36] dark:bg-[#12161D]">
                   <h3 className="font-display text-sm font-semibold text-[#14171A] dark:text-[#F0F3F6]">
-                    {grp.area}
+                    <HighlightMatch text={grp.area} query={query} />
                   </h3>
                   <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
                     {grp.kitPage}
                   </span>
                 </div>
                 <div className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
-                  {grp.items.map((it, idx) => (
-                    <div key={idx} className="px-4 py-3 text-xs sm:text-sm">
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <span className="font-medium text-[#14171A] dark:text-[#F0F3F6]">
-                          {it.action}
-                        </span>
-                        <span className="font-mono text-xs font-bold text-[#0F5132] tabular-nums dark:text-emerald-400">
-                          {it.example2526}
-                        </span>
+                  {grp.items.map((it, idx) => {
+                    const dlKey = `dl-${grp.id}-${idx}`;
+                    const isDlMasked = selfTestMode && !revealedRows[dlKey];
+                    return (
+                      <div key={idx} className="tax-study-row group px-4 py-3 text-xs sm:text-sm">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium text-[#14171A] transition-colors group-hover:text-[#0B3D26] dark:text-[#F0F3F6] dark:group-hover:text-white">
+                            <HighlightMatch text={it.action} query={query} />
+                          </span>
+                          {selfTestMode ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleRevealRow(dlKey)}
+                              aria-label={`Reveal deadline for ${it.action}`}
+                              className={`font-mono text-xs font-bold text-[#0F5132] tabular-nums transition-[filter,color] duration-150 group-hover:text-[#0B3D26] dark:text-emerald-400 dark:group-hover:text-emerald-300 ${
+                                isDlMasked
+                                  ? 'blur-[5px] select-none hover:blur-0 focus-visible:blur-0'
+                                  : ''
+                              }`}
+                            >
+                              <HighlightMatch text={it.example2526} query={query} />
+                            </button>
+                          ) : (
+                            <span className="font-mono text-xs font-bold text-[#0F5132] tabular-nums group-hover:text-[#0B3D26] dark:text-emerald-400 dark:group-hover:text-emerald-300">
+                              <HighlightMatch text={it.example2526} query={query} />
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-neutral-600 transition-colors group-hover:text-[#14171A] dark:text-neutral-400 dark:group-hover:text-neutral-200">
+                          <HighlightMatch text={it.rule} query={query} />
+                        </p>
                       </div>
-                      <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
-                        {it.rule}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}

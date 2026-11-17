@@ -8,22 +8,35 @@ import {
   calculateCarAndFuelBenefit,
   calculateChattelGain,
   calculateCorporationTax,
+  calculateIhtLifetimeAndDeath2526,
   calculateIncomeTax2526,
   calculateNic2526,
+  calculatePensionAnnualAllowance2526,
+  calculateVatRegistrationAndFrs2526,
   evaluateArithmeticExpression,
   generateTrapVariant,
 } from './taxCalculators';
-import { auditEasyMarks, coachCbePresentation, gradeQuestion, scoreKeywords } from './scoring';
+import {
+  auditEasyMarks,
+  buildWrongAnswerFeedback,
+  coachCbePresentation,
+  formatRichAnswer,
+  gradeQuestion,
+  scoreKeywords,
+} from './scoring';
 import {
   categorizeTrapLedger,
   computeExamPredictions,
   computeStudyPlanDays,
   computeTaxHeadSummaries,
   createInitialAppState,
+  formatInteractionLabel,
   getDueMistakes,
   getRecommendedNextAction,
   parseImportedState,
   recordAttemptAndUpdateState,
+  resolveQuestionJump,
+  searchQuickJumpTargets,
   serializeStateForExport,
 } from './mastery';
 import {
@@ -723,4 +736,120 @@ test('calculateCapitalAllowances2526 handles 9m short AP, 50% SRP FYA (no same-y
   assert.equal(sole.srpWda, 3_000); // 6% * £50,000 excess
 });
 
+test('FA25 Pension AA Taper, IHT CLT Gross-up & Taper Relief, and VAT FRS Calculators match rules', () => {
+  // Pension AA Taper: Threshold > £200k & Adjusted £310k -> reduced by £25k -> £35k AA (+£20k bf = £55k)
+  const aa = calculatePensionAnnualAllowance2526({
+    thresholdIncome: 220_000,
+    adjustedIncome: 310_000,
+    unusedBfYears: 20_000,
+    grossContribution: 60_000,
+  });
+  assert.equal(aa.isTapered, true);
+  assert.equal(aa.taperReduction, 25_000);
+  assert.equal(aa.currentYearAa, 35_000);
+  assert.equal(aa.excessContribution, 5_000);
 
+  // Pension AA Taper floor: Adjusted £400k -> £10k floor
+  const aaFloor = calculatePensionAnnualAllowance2526({
+    thresholdIncome: 300_000,
+    adjustedIncome: 400_000,
+  });
+  assert.equal(aaFloor.currentYearAa, 10_000);
+
+  // IHT CLT £531k after £6k AE = £525k, NRB £325k, donor pays -> £200k * 25% = £50k lifetime;
+  // gross £575k; death 4.5y later (40% taper relief) -> £250k * 40% * 60% = £60k -> net £10k
+  const iht = calculateIhtLifetimeAndDeath2526({
+    transferValue: 531_000,
+    aeAvailable: 6_000,
+    priorClts7Years: 0,
+    yearsSurvived: 4.5,
+    isClt: true,
+    donorPaysLifetime: true,
+  });
+  assert.equal(iht.lifetimeTax, 50_000);
+  assert.equal(iht.grossTransferOnDeath, 575_000);
+  assert.equal(iht.taperReliefPct, 40);
+  assert.equal(iht.deathTaxAfterTaper, 60_000);
+  assert.equal(iht.netDeathTaxDue, 10_000);
+
+  // VAT Registration (£90k) & FRS with 1% Year-1 discount
+  const vat = calculateVatRegistrationAndFrs2526({
+    rolling12mTurnover: 92_000,
+    next30dTurnover: 15_000,
+    vatInclusiveTurnover: 120_000,
+    frsRatePct: 12,
+    firstYearDiscount: true,
+  });
+  assert.equal(vat.registrationRequired, true);
+  assert.equal(vat.effectiveFrsRatePct, 11);
+  assert.equal(vat.frsVatPayable, 13_200);
+});
+
+test('formatInteractionLabel and resolveQuestionJump handle IDs, Specimen shorthand, and title/topic keywords', () => {
+  assert.equal(formatInteractionLabel('grid_2x2'), '2×2 Grid');
+  assert.equal(formatInteractionLabel('pair_dropdown'), 'Dropdown Match');
+  assert.equal(formatInteractionLabel('numeric_input'), 'Numeric (£)');
+  assert.equal(formatInteractionLabel('single_mcq'), 'Single MCQ');
+
+  const bank = [...questions, ...specimen];
+  assert.equal(resolveQuestionJump(bank, '128').id, 'Q128');
+  assert.equal(resolveQuestionJump(bank, 'sc2').id, 'SPEC-CASE-2');
+  assert.equal(resolveQuestionJump(bank, 'S3').id, 'SPEC-Q3');
+
+  const sheldon = resolveQuestionJump(bank, 'Sheldon');
+  assert.equal(sheldon.id, 'Q101');
+  assert.equal(sheldon.matchedByKeyword, true);
+
+  const opal = resolveQuestionJump(bank, 'Opal');
+  assert.equal(opal.id, 'SPEC-CASE-2');
+  assert.equal(opal.matchedByKeyword, true);
+
+  const defaultJump = searchQuickJumpTargets(bank, '');
+  assert.ok(defaultJump.length >= 5);
+  assert.ok(defaultJump.some((item) => item.kind === 'question'));
+  assert.ok(defaultJump.some((item) => item.kind === 'topic'));
+
+  const caHits = searchQuickJumpTargets(bank, 'Capital allowances');
+  assert.ok(caHits.some((item) => item.kind === 'topic' && item.topicId === 8));
+
+  const scHits = searchQuickJumpTargets(bank, 'sc2');
+  assert.equal(scHits[0]?.kind, 'question');
+  assert.equal(scHits[0]?.id, 'SPEC-CASE-2');
+});
+
+test('formatRichAnswer and buildWrongAnswerFeedback resolve full labels and per-OT explanations on wrong answers', () => {
+  const q3 = questions.find((q) => q.id === 'Q3')!;
+  assert.equal(formatRichAnswer(q3.interaction, q3.options, null), 'Not answered');
+  assert.match(formatRichAnswer(q3.interaction, q3.options, 'C'), /^C — /);
+
+  const q3Wrong = gradeQuestion(q3, 'A');
+  const q3WrongFb = buildWrongAnswerFeedback(q3, q3Wrong, 'A');
+  assert.equal(q3WrongFb.isWrongOrPartial, true);
+  assert.match(q3WrongFb.userSummary, /^A — /);
+  assert.match(q3WrongFb.correctSummary, /^C — /);
+  assert.ok(q3WrongFb.explanation.length >= 15);
+  assert.ok(q3WrongFb.trapNote.length >= 10);
+
+  const q3Right = gradeQuestion(q3, 'C');
+  const q3RightFb = buildWrongAnswerFeedback(q3, q3Right, 'C');
+  assert.equal(q3RightFb.isWrongOrPartial, false);
+
+  const numericQ = questions.find((q) => q.interaction === 'numeric_input')!;
+  assert.equal(formatRichAnswer('numeric_input', null, '9240'), '£9,240');
+
+  const matrixQ = questions.find((q) => q.interaction === 'matrix')!;
+  const matrixSummary = formatRichAnswer('matrix', matrixQ.options, matrixQ.correct_answer);
+  assert.match(matrixSummary, /Row 1/);
+
+  const pairQ = questions.find((q) => q.interaction === 'pair_dropdown')!;
+  const pairSummary = formatRichAnswer('pair_dropdown', pairQ.options, pairQ.correct_answer);
+  assert.ok(pairSummary.length > 0 && pairSummary !== 'Not answered');
+
+  const q93 = questions.find((q) => q.id === 'Q93')!;
+  const q93Partial = gradeQuestion(q93, ['B', 'B', '3505', 'D', {}]);
+  const q93Fb = buildWrongAnswerFeedback(q93, q93Partial, ['B', 'B', '3505', 'D', {}]);
+  assert.equal(q93Fb.isWrongOrPartial, true);
+  assert.equal(q93Fb.subFeedbacks.length, 5);
+  assert.equal(q93Fb.subFeedbacks[0].correct, false);
+  assert.ok(q93Fb.subFeedbacks[0].explanation.trim().length > 10);
+});

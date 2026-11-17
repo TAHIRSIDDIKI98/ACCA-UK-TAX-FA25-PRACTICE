@@ -56,6 +56,7 @@ export const WorkedSolutionBlock: React.FC<WorkedSolutionBlockProps> = ({
                       <tr
                         key={rIdx}
                         className={[
+                          'transition-colors hover:bg-[#FAF9F6] dark:hover:bg-[#161B22]',
                           row.ruleAbove
                             ? 'border-t-2 border-neutral-400 dark:border-neutral-600'
                             : rIdx > 0

@@ -318,8 +318,10 @@ export default function App() {
       }}
       onSaveProfile={handleSaveProfile}
       onOpenQuestionById={handleOpenQuestionById}
+      onSelectTopic={handleSelectTopic}
       onStudyTextUploaded={handleStudyTextUploaded}
       onOpenTablesDrawer={() => setGlobalTablesOpen(true)}
+      allQuestions={ALL_BANK_QUESTIONS}
     >
       <TaxTablesDrawer
         open={globalTablesOpen}

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Calculator, Delete, X } from 'lucide-react';
+import { Calculator, Check, Copy, Delete, X } from 'lucide-react';
 import { evaluateArithmeticExpression } from '../engine/taxCalculators';
 
 interface TaxCalculatorPadProps {
@@ -22,6 +22,10 @@ const FA25_SHORTCUTS = [
   { label: '×25% CT', append: ' * 25%' },
   { label: '×20% BR', append: ' * 20%' },
   { label: '×40% HR', append: ' * 40%' },
+  { label: '×45% AR', append: ' * 45%' },
+  { label: '×8% NIC', append: ' * 8%' },
+  { label: '×2% NIC', append: ' * 2%' },
+  { label: '×15% ER', append: ' * 15%' },
   { label: '÷6 VAT', append: ' / 6' },
   { label: '×11/12', append: ' * 11 / 12' },
 ];
@@ -34,9 +38,20 @@ export const TaxCalculatorPad: React.FC<TaxCalculatorPadProps> = ({
   onClose,
 }) => {
   const [memoryVal, setMemoryVal] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
   const result = useMemo(() => evaluateArithmeticExpression(expr), [expr]);
 
   const appendToken = (tok: string) => onChangeExpr(`${expr}${tok}`);
+
+  const handleCopyRounded = async (rounded: number) => {
+    try {
+      await navigator.clipboard?.writeText(String(rounded));
+    } catch {
+      // Clipboard API may be unavailable in restricted contexts
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div className="rounded-xl border border-[#E2DFD5] bg-white p-4 shadow-sm dark:border-[#2A313D] dark:bg-[#161B22]">
@@ -66,6 +81,16 @@ export const TaxCalculatorPad: React.FC<TaxCalculatorPadProps> = ({
             aria-label="CBE calculator expression"
             value={expr}
             onChange={(e) => onChangeExpr(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (result.ok && canApplyRounded && onApplyRounded) {
+                  onApplyRounded(result.rounded);
+                } else if (result.ok) {
+                  void handleCopyRounded(result.rounded);
+                }
+              }
+            }}
             placeholder="Type or tap keys: e.g. 36000 * 36% * 11 / 12"
             className="w-full rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-3 py-2 font-mono text-sm font-semibold text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
           />
@@ -81,6 +106,23 @@ export const TaxCalculatorPad: React.FC<TaxCalculatorPadProps> = ({
                     </span>
                   </span>
                   <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyRounded(result.rounded)}
+                      className="inline-flex items-center gap-1 rounded border border-[#D8D4C8] bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1F2631] dark:text-neutral-200"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3 w-3 text-[#0F5132] dark:text-emerald-400" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          Copy £{result.rounded.toLocaleString()}
+                        </>
+                      )}
+                    </button>
                     <button
                       type="button"
                       onClick={() => setMemoryVal(result.value)}

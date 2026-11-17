@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Bot,
   Brain,
   CheckCircle2,
@@ -21,6 +22,7 @@ import { addDaysIso, getDueMistakes } from '../engine/mastery';
 import type { AppState, KitQuestion } from '../types/tx';
 import { MistakeBatchDiagnosisPanel, MistakeTutorInlinePanel } from './MistakeAiCoach';
 import { TrapLedgerDashboard } from './TrapLedgerDashboard';
+import { WorkedSolutionBlock } from './WorkedSolutionBlock';
 
 export type LabSubTab = 'srs' | 'traps' | 'confuse' | 'memory';
 
@@ -47,10 +49,11 @@ export const LabsView: React.FC<LabsViewProps> = ({
     setSubTab(initialSubTab);
   }, [initialSubTab]);
 
-  // Mistake Bank filter & inline Gemini Tutor row
+  // Mistake Bank filter & inline explanation / Gemini Tutor row
   const [srsFilter, setSrsFilter] = useState<'all' | 'due'>('all');
   const [mistakeSearch, setMistakeSearch] = useState('');
   const [activeTutorMistakeId, setActiveTutorMistakeId] = useState<string | null>(null);
+  const [expandedMistakeIds, setExpandedMistakeIds] = useState<Record<string, boolean>>({});
 
   // Confusion Clinic interactive state
   const [activePairId, setActivePairId] = useState(CONFUSION_CLINIC_PAIRS[0].id);
@@ -98,6 +101,49 @@ export const LabsView: React.FC<LabsViewProps> = ({
 
   const safeDeckIdx = memoryCards.length > 0 ? deckIdx % memoryCards.length : 0;
   const activeDeckCard = memoryCards[safeDeckIdx];
+
+  // Keyboard shortcuts for Memory Vault Flash Deck (Space flip, Left/Right step, 1-5 rate)
+  useEffect(() => {
+    if (subTab !== 'memory' || memoryMode !== 'deck' || !activeDeckCard) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === ' ') {
+        if (tag === 'BUTTON') return;
+        e.preventDefault();
+        setDeckFlipped((f) => !f);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setDeckIdx((i) => (i - 1 + memoryCards.length) % memoryCards.length);
+        setDeckFlipped(false);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setDeckIdx((i) => (i + 1) % memoryCards.length);
+        setDeckFlipped(false);
+      } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
+        e.preventDefault();
+        const r = Number(e.key);
+        const days = r <= 2 ? 1 : r === 3 ? 3 : 7;
+        onRateMemoryCard(
+          activeDeckCard.id,
+          r,
+          addDaysIso(new Date().toISOString(), days)
+        );
+        setDeckIdx((i) => (i + 1) % memoryCards.length);
+        setDeckFlipped(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [subTab, memoryMode, activeDeckCard, memoryCards.length, onRateMemoryCard]);
+
+  const confuseScore = useMemo(
+    () => activePair.scenarios.filter((sc, idx) => confuseChoices[idx] === sc.answer).length,
+    [activePair, confuseChoices]
+  );
 
   return (
     <div className="space-y-6">
@@ -254,6 +300,7 @@ export const LabsView: React.FC<LabsViewProps> = ({
                     {visibleMistakes.map((m) => {
                       const isDue = new Date(m.nextReviewIso).getTime() <= Date.now();
                       const tutorOpen = activeTutorMistakeId === m.id;
+                      const explainOpen = Boolean(expandedMistakeIds[m.id]);
                       const matchedQuestion = allQuestions.find((q) => q.id === m.questionId);
                       return (
                         <div key={m.id}>
@@ -299,7 +346,26 @@ export const LabsView: React.FC<LabsViewProps> = ({
                               </p>
                             </div>
 
-                            <div className="lg:col-span-2 flex flex-wrap items-center gap-2 lg:justify-end">
+                            <div className="lg:col-span-2 flex flex-wrap items-center gap-1.5 lg:justify-end">
+                              {matchedQuestion && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedMistakeIds((prev) => ({
+                                      ...prev,
+                                      [m.id]: !prev[m.id],
+                                    }))
+                                  }
+                                  className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 font-semibold transition-colors ${
+                                    explainOpen
+                                      ? 'border-[#0F5132] bg-[#FAF9F6] text-[#0F5132] dark:border-emerald-500 dark:bg-[#1C222B] dark:text-emerald-300'
+                                      : 'border-[#D8D4C8] bg-white text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#161B22] dark:text-neutral-200'
+                                  }`}
+                                >
+                                  <BookOpen className="h-3.5 w-3.5 text-[#0F5132] dark:text-emerald-400" />
+                                  {explainOpen ? 'Hide Answer' : 'Explanation'}
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() =>
@@ -324,6 +390,37 @@ export const LabsView: React.FC<LabsViewProps> = ({
                               </button>
                             </div>
                           </div>
+
+                          {explainOpen && matchedQuestion && (
+                            <div className="border-t border-[#EFECE4] bg-[#FAF9F6] px-4 py-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]">
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs">
+                                <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2 dark:border-red-900/50 dark:bg-red-950/25">
+                                  <span className="font-semibold text-red-700 dark:text-red-400">Your Answer: </span>
+                                  <span className="font-mono font-bold text-[#14171A] dark:text-[#F0F3F6]">
+                                    {m.userAnswerSummary}
+                                  </span>
+                                </div>
+                                <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 dark:border-emerald-900/50 dark:bg-emerald-950/25">
+                                  <span className="font-semibold text-[#0F5132] dark:text-emerald-400">Correct Answer: </span>
+                                  <span className="font-mono font-bold text-[#14171A] dark:text-[#F0F3F6]">
+                                    {m.correctAnswerSummary}
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
+                                  Explanation &amp; Worked Solution
+                                </p>
+                                <WorkedSolutionBlock text={matchedQuestion.full_worked_solution} compact />
+                              </div>
+                              {matchedQuestion.examiner_debrief.distractor_forensics && (
+                                <p className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-neutral-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-neutral-200">
+                                  <strong className="text-amber-800 dark:text-amber-300">Distractor Check: </strong>
+                                  {matchedQuestion.examiner_debrief.distractor_forensics}
+                                </p>
+                              )}
+                            </div>
+                          )}
 
                           {tutorOpen && (
                             <MistakeTutorInlinePanel
@@ -458,42 +555,75 @@ export const LabsView: React.FC<LabsViewProps> = ({
                       {idx + 1}. {sc.prompt}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {(['left', 'right'] as const).map((side) => (
-                        <button
-                          key={side}
-                          type="button"
-                          disabled={confuseSubmitted}
-                          onClick={() =>
-                            setConfuseChoices((prev) => ({ ...prev, [idx]: side }))
+                      {(['left', 'right'] as const).map((side) => {
+                        const title = side === 'left' ? activePair.leftTitle : activePair.rightTitle;
+                        let btnStyle =
+                          picked === side
+                            ? 'border-[#0F5132] bg-[#0F5132] text-white dark:bg-emerald-600'
+                            : 'border-[#D8D4C8] bg-white text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200';
+                        let badge: string | null = null;
+
+                        if (confuseSubmitted) {
+                          if (side === sc.answer) {
+                            btnStyle =
+                              'border-[#0F5132] bg-[#0F5132] text-white dark:border-emerald-500 dark:bg-emerald-700';
+                            badge = '✓ Correct';
+                          } else if (picked === side) {
+                            btnStyle =
+                              'border-red-600 bg-red-600 text-white dark:border-red-500 dark:bg-red-700';
+                            badge = '✗ Your Choice';
+                          } else {
+                            btnStyle =
+                              'border-[#E6E4DD] bg-white/70 text-neutral-500 dark:border-[#262C36] dark:bg-[#161B22] dark:text-neutral-400';
                           }
-                          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
-                            picked === side
-                              ? 'border-[#0F5132] bg-[#0F5132] text-white dark:bg-emerald-600'
-                              : 'border-[#D8D4C8] bg-white text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200'
-                          }`}
-                        >
-                          {side === 'left' ? activePair.leftTitle : activePair.rightTitle}
-                        </button>
-                      ))}
+                        }
+
+                        return (
+                          <button
+                            key={side}
+                            type="button"
+                            disabled={confuseSubmitted}
+                            onClick={() =>
+                              setConfuseChoices((prev) => ({ ...prev, [idx]: side }))
+                            }
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${btnStyle}`}
+                          >
+                            <span>{title}</span>
+                            {badge && (
+                              <span className="rounded bg-black/15 px-1.5 py-0.5 text-[10px] font-bold">
+                                {badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                     {confuseSubmitted && (
-                      <p
-                        className={`text-xs font-semibold ${
+                      <div
+                        className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
                           isOk
-                            ? 'text-[#0F5132] dark:text-emerald-400'
-                            : 'text-red-700 dark:text-red-400'
+                            ? 'border-emerald-200 bg-emerald-50/70 text-[#0F5132] dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-300'
+                            : 'border-red-200 bg-red-50/70 text-red-800 dark:border-red-900/50 dark:bg-red-950/25 dark:text-red-300'
                         }`}
                       >
-                        {isOk ? '✓ Correct: ' : '✗ Incorrect: '}
-                        {sc.explanation}
-                      </p>
+                        <p className="font-semibold">
+                          {isOk
+                            ? '✓ Correct: '
+                            : `✗ Incorrect — Correct answer: ${
+                                sc.answer === 'left' ? activePair.leftTitle : activePair.rightTitle
+                              }. `}
+                          <span className="font-normal text-[#14171A] dark:text-neutral-200">
+                            {sc.explanation}
+                          </span>
+                        </p>
+                      </div>
                     )}
                   </div>
                 );
               })}
             </div>
 
-            {!confuseSubmitted && (
+            {!confuseSubmitted ? (
               <button
                 type="button"
                 onClick={() => setConfuseSubmitted(true)}
@@ -501,6 +631,24 @@ export const LabsView: React.FC<LabsViewProps> = ({
               >
                 Grade Discrimination Drill
               </button>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/25">
+                <p className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-300 tabular-nums">
+                  Drill Score: {confuseScore} / {activePair.scenarios.length} (
+                  {Math.round((confuseScore / activePair.scenarios.length) * 100)}%)
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfuseChoices({});
+                    setConfuseSubmitted(false);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#D8D4C8] bg-white px-3 py-1.5 text-xs font-semibold text-[#14171A] hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Retry Drill
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -665,6 +813,9 @@ export const LabsView: React.FC<LabsViewProps> = ({
                   })}
                 </div>
               </div>
+              <p className="text-center font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
+                Keys: Space flip · ←/→ step · 1–5 rate &amp; advance
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

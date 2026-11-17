@@ -19,7 +19,9 @@ import {
 import { HIGHER_SKILLS_ROSTER, TOPICS, WRITTEN_ANSWER_ROSTER } from '../data/taxReference';
 import {
   auditEasyMarks,
+  buildWrongAnswerFeedback,
   coachCbePresentation,
+  formatRichAnswer,
   gradeQuestion,
   scoreKeywords,
   type UserQuestionAnswer,
@@ -169,6 +171,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
   const [customIncludeC, setCustomIncludeC] = useState<boolean>(true);
   const [customPrioritizeUnseen, setCustomPrioritizeUnseen] = useState<boolean>(true);
   const [reportFilter, setReportFilter] = useState<'all' | 'missed' | 'cr'>('all');
+  const [reportExpanded, setReportExpanded] = useState<Record<string, boolean>>({});
   const [navFilter, setNavFilter] = useState<'all' | 'unanswered' | 'flagged'>('all');
 
   // Written-Answer Clinic state
@@ -180,6 +183,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
   const [rapidItems, setRapidItems] = useState<KitQuestion[]>([]);
   const [rapidAnswers, setRapidAnswers] = useState<Record<string, string>>({});
   const [rapidSubmitted, setRapidSubmitted] = useState(false);
+  const [rapidExpanded, setRapidExpanded] = useState<Record<string, boolean>>({});
 
   const sortByPreferredSections = (items: KitQuestion[]) => {
     const order = appState.profile.preferredSectionOrder;
@@ -216,6 +220,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
     setCrSyncedToMastery(false);
     setAutoSyncedCount(0);
     setReportFilter('all');
+    setReportExpanded({});
     setNavFilter('all');
     setSecondsLeft(nextPaper.budgetSeconds);
     setSubView('running');
@@ -313,6 +318,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
     setCrSyncedToMastery(false);
     setAutoSyncedCount(0);
     setReportFilter('all');
+    setReportExpanded({});
     setSecondsLeft(savedMock.secondsLeft ?? savedMock.paper.budgetSeconds);
     setSubView('running');
   };
@@ -346,6 +352,41 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [currentIdx, subView]);
+
+  // Keyboard shortcuts during strict CBE mock exam run
+  useEffect(() => {
+    if (subView !== 'running' || !paper) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.metaKey || e.ctrlKey) return;
+      const curItem = paper.items[currentIdx];
+      if (!curItem) return;
+
+      if (e.key === '[' || (e.altKey && e.key === 'ArrowLeft')) {
+        if (currentIdx > 0) {
+          e.preventDefault();
+          setCurrentIdx((i) => Math.max(0, i - 1));
+        }
+      } else if (e.key === ']' || (e.altKey && e.key === 'ArrowRight')) {
+        if (currentIdx < paper.items.length - 1) {
+          e.preventDefault();
+          setCurrentIdx((i) => Math.min(paper.items.length - 1, i + 1));
+        }
+      } else if (!e.altKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFlagged((f) => ({ ...f, [curItem.id]: !f[curItem.id] }));
+      } else if (!e.altKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setCalcOpen((v) => !v);
+      } else if (!e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        setTablesOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [subView, paper, currentIdx]);
 
   useEffect(() => {
     if (subView !== 'running' || !paper) return;
@@ -468,9 +509,21 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
       elapsedSeconds: totalElapsed,
     });
     onRecordMockAttempts(autoAttemptEntries);
+    const initialExpanded: Record<string, boolean> = {};
+    let autoOpenMissedCount = 0;
+    for (const q of paper.items) {
+      if (q.type !== 'cr') {
+        const res = gradeQuestion(q, answers[q.id]);
+        if (res.marksScored < q.marks && autoOpenMissedCount < 3) {
+          initialExpanded[q.id] = true;
+          autoOpenMissedCount++;
+        }
+      }
+    }
     setActiveMockId(mockId);
     setAutoSyncedCount(autoAttemptEntries.length);
     setCrSyncedToMastery(false);
+    setReportExpanded(initialExpanded);
     discardSavedMock();
     setSubView('report');
   };
@@ -559,6 +612,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
                       <td key={ci} className="px-3.5 py-2.5 text-center">
                         <input
                           type="checkbox"
+                          aria-label={`${r} — ${col}`}
                           checked={chosen.includes(col)}
                           onChange={() => {
                             const nextRow = chosen.includes(col)
@@ -668,6 +722,7 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
     setRapidItems(mcqs);
     setRapidAnswers({});
     setRapidSubmitted(false);
+    setRapidExpanded({});
     setSubView('easy');
   };
 
@@ -865,154 +920,183 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
             </button>
           </div>
 
-          {curQ.scenario && <ScenarioText text={curQ.scenario} />}
+          <div
+            className={
+              curQ.type === 'case' || curQ.type === 'cr'
+                ? 'grid grid-cols-1 gap-6 lg:grid-cols-12'
+                : 'space-y-4'
+            }
+          >
+            <div
+              className={
+                curQ.type === 'case' || curQ.type === 'cr'
+                  ? 'lg:col-span-6 lg:sticky lg:top-20 lg:self-start space-y-4'
+                  : 'space-y-4'
+              }
+            >
+              {curQ.scenario && <ScenarioText text={curQ.scenario} />}
 
-          <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/40 p-4 text-sm font-semibold text-[#14171A] dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-[#F0F3F6]">
-            {curQ.requirement}
-          </div>
-
-          {curQ.type === 'cr' ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
-                  CBE Constructed Response Workspace (Marked)
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const tpl = getProformaTemplateForTopic(curQ.topic_id);
-                      const prev = typeof curAns === 'string' ? curAns : '';
-                      setAnswers((a) => ({
-                        ...a,
-                        [curQ.id]: prev.trim() ? `${prev}\n\n${tpl}` : tpl,
-                      }));
-                    }}
-                    className="rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1 text-[11px] font-semibold text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
-                  >
-                    + Insert Proforma Template
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowScratchPad((v) => !v)}
-                    className="rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
-                  >
-                    {showScratchPad ? 'Hide Scratch Pad' : 'Scratch Pad (Unmarked)'}
-                  </button>
-                </div>
+              <div className="rounded-xl border border-[#D4DFD7] bg-emerald-50/40 p-4 text-sm font-semibold text-[#14171A] dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-[#F0F3F6]">
+                {curQ.requirement}
               </div>
-              <textarea
-                rows={11}
-                value={typeof curAns === 'string' ? curAns : ''}
-                onChange={(e) => setAnswers((a) => ({ ...a, [curQ.id]: e.target.value }))}
-                placeholder="Enter CBE working & headings here (bracketed negatives (X), explicit 0 for exempt items, labelled (W1)/(W2) workings)..."
-                className="w-full rounded-xl border border-[#D8D4C8] bg-[#FAF9F6] p-3.5 font-mono text-xs text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
-              />
-              {showScratchPad && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-1.5 dark:border-amber-900/60 dark:bg-amber-950/20">
-                  <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
-                    Unmarked CBE Scratch Pad (ACCA markers CANNOT see this box!)
-                  </p>
-                  <textarea
-                    rows={4}
-                    value={crScratchPads[curQ.id] ?? ''}
-                    onChange={(e) =>
-                      setCrScratchPads((s) => ({ ...s, [curQ.id]: e.target.value }))
-                    }
-                    placeholder="Rough jottings only — copy workings into the main response box above for marks."
-                    className="w-full rounded-lg border border-amber-200 bg-white p-2.5 font-mono text-xs text-[#14171A] dark:border-amber-800 dark:bg-[#0D1117] dark:text-[#F0F3F6]"
-                  />
-                </div>
-              )}
             </div>
-          ) : curQ.type === 'case' ? (
-            <div className="space-y-4">
-              {(() => {
-                const subQs = curQ.options as CaseSubQuestion[];
-                const arr = Array.isArray(curAns) ? curAns : [];
-                const answeredOtCount = subQs.filter((_, idx) =>
-                  hasAnswerEntered(arr[idx] as UserQuestionAnswer | undefined)
-                ).length;
-                return (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-3.5 py-2 dark:border-[#262C36] dark:bg-[#12161D]">
-                    <span className="font-mono text-xs font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">
-                      Section B Case · {answeredOtCount}/{subQs.length} OTs answered
+
+            <div
+              className={
+                curQ.type === 'case' || curQ.type === 'cr'
+                  ? 'lg:col-span-6 space-y-4'
+                  : 'space-y-4'
+              }
+            >
+              {curQ.type === 'cr' ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[#14171A] dark:text-[#F0F3F6]">
+                      CBE Constructed Response Workspace (Marked)
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {subQs.map((sq, sIdx) => {
-                        const done = hasAnswerEntered(arr[sIdx] as UserQuestionAnswer | undefined);
-                        return (
-                          <button
-                            key={sq.sub_num}
-                            type="button"
-                            onClick={() => {
-                              document
-                                .getElementById(`mock-case-${curQ.id}-${sq.sub_num}`)
-                                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }}
-                            className={`rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors ${
-                              done
-                                ? 'border-emerald-300 bg-emerald-50 text-[#0F5132] dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
-                                : 'border-[#D8D4C8] bg-white text-neutral-700 hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-300'
-                            }`}
-                          >
-                            OT{sq.sub_num}
-                            {done ? ' ✓' : ''}
-                          </button>
-                        );
-                      })}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tpl = getProformaTemplateForTopic(curQ.topic_id);
+                          const prev = typeof curAns === 'string' ? curAns : '';
+                          setAnswers((a) => ({
+                            ...a,
+                            [curQ.id]: prev.trim() ? `${prev}\n\n${tpl}` : tpl,
+                          }));
+                        }}
+                        className="rounded-lg border border-[#D8D4C8] bg-[#FAF9F6] px-2.5 py-1 text-[11px] font-semibold text-[#14171A] hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+                      >
+                        + Insert Proforma Template
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowScratchPad((v) => !v)}
+                        className="rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+                      >
+                        {showScratchPad ? 'Hide Scratch Pad' : 'Scratch Pad (Unmarked)'}
+                      </button>
                     </div>
                   </div>
-                );
-              })()}
-              {(curQ.options as CaseSubQuestion[]).map((sq, sIdx) => {
-                const arr = Array.isArray(curAns) ? curAns : [];
-                return (
-                  <div
-                    key={sq.sub_num}
-                    id={`mock-case-${curQ.id}-${sq.sub_num}`}
-                    className="scroll-mt-20 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]"
-                  >
-                    <p className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
-                      OT {sq.sub_num} ({sq.marks} marks)
-                    </p>
-                    <p className="text-sm text-[#14171A] whitespace-pre-line dark:text-[#F0F3F6]">
-                      {sq.prompt}
-                    </p>
-                    {renderMockInteractiveInput(
-                      sq.interaction,
-                      sq.options,
-                      arr[sIdx],
-                      (subVal) => {
-                        const next = [...arr];
-                        next[sIdx] = subVal as string | string[] | Record<string, string[]>;
-                        setAnswers((a) => ({ ...a, [curQ.id]: next }));
-                      },
-                      `mock-case-${curQ.id}-${sIdx}`
-                    )}
-                  </div>
-                );
-              })}
+                  <textarea
+                    rows={12}
+                    value={typeof curAns === 'string' ? curAns : ''}
+                    onChange={(e) => setAnswers((a) => ({ ...a, [curQ.id]: e.target.value }))}
+                    placeholder="Enter CBE working & headings here (bracketed negatives (X), explicit 0 for exempt items, labelled (W1)/(W2) workings)..."
+                    className="w-full rounded-xl border border-[#D8D4C8] bg-[#FAF9F6] p-3.5 font-mono text-xs leading-relaxed text-[#14171A] focus:border-[#0F5132] focus:outline-none dark:border-[#303846] dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                  />
+                  {showScratchPad && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-1.5 dark:border-amber-900/60 dark:bg-amber-950/20">
+                      <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                        Unmarked CBE Scratch Pad (ACCA markers CANNOT see this box!)
+                      </p>
+                      <textarea
+                        rows={4}
+                        value={crScratchPads[curQ.id] ?? ''}
+                        onChange={(e) =>
+                          setCrScratchPads((s) => ({ ...s, [curQ.id]: e.target.value }))
+                        }
+                        placeholder="Rough jottings only — copy workings into the main response box above for marks."
+                        className="w-full rounded-lg border border-amber-200 bg-white p-2.5 font-mono text-xs text-[#14171A] dark:border-amber-800 dark:bg-[#0D1117] dark:text-[#F0F3F6]"
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : curQ.type === 'case' ? (
+                <div className="space-y-4">
+                  {(() => {
+                    const subQs = curQ.options as CaseSubQuestion[];
+                    const arr = Array.isArray(curAns) ? curAns : [];
+                    const answeredOtCount = subQs.filter((_, idx) =>
+                      hasAnswerEntered(arr[idx] as UserQuestionAnswer | undefined)
+                    ).length;
+                    return (
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-3.5 py-2 dark:border-[#262C36] dark:bg-[#12161D]">
+                        <span className="font-mono text-xs font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">
+                          Section B Case · {answeredOtCount}/{subQs.length} OTs answered
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {subQs.map((sq, sIdx) => {
+                            const done = hasAnswerEntered(arr[sIdx] as UserQuestionAnswer | undefined);
+                            return (
+                              <button
+                                key={sq.sub_num}
+                                type="button"
+                                onClick={() => {
+                                  document
+                                    .getElementById(`mock-case-${curQ.id}-${sq.sub_num}`)
+                                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }}
+                                className={`rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors ${
+                                  done
+                                    ? 'border-emerald-300 bg-emerald-50 text-[#0F5132] dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
+                                    : 'border-[#D8D4C8] bg-white text-neutral-700 hover:bg-[#EFECE4] dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-300'
+                                }`}
+                              >
+                                OT{sq.sub_num}
+                                {done ? ' ✓' : ''}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {(curQ.options as CaseSubQuestion[]).map((sq, sIdx) => {
+                    const arr = Array.isArray(curAns) ? curAns : [];
+                    return (
+                      <div
+                        key={sq.sub_num}
+                        id={`mock-case-${curQ.id}-${sq.sub_num}`}
+                        className="scroll-mt-20 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]"
+                      >
+                        <p className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
+                          OT {sq.sub_num} ({sq.marks} marks)
+                        </p>
+                        <p className="text-sm text-[#14171A] whitespace-pre-line dark:text-[#F0F3F6]">
+                          {sq.prompt}
+                        </p>
+                        {renderMockInteractiveInput(
+                          sq.interaction,
+                          sq.options,
+                          arr[sIdx],
+                          (subVal) => {
+                            const next = [...arr];
+                            next[sIdx] = subVal as string | string[] | Record<string, string[]>;
+                            setAnswers((a) => ({ ...a, [curQ.id]: next }));
+                          },
+                          `mock-case-${curQ.id}-${sIdx}`
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                renderMockInteractiveInput(
+                  curQ.interaction,
+                  curQ.options as McqOption[] | MatrixOptions | PairDropdownGroup[],
+                  curAns,
+                  (nextVal) => setAnswers((a) => ({ ...a, [curQ.id]: nextVal })),
+                  `mock-q-${curQ.id}`
+                )
+              )}
             </div>
-          ) : (
-            renderMockInteractiveInput(
-              curQ.interaction,
-              curQ.options as McqOption[] | MatrixOptions | PairDropdownGroup[],
-              curAns,
-              (nextVal) => setAnswers((a) => ({ ...a, [curQ.id]: nextVal })),
-              `mock-q-${curQ.id}`
-            )
-          )}
+          </div>
 
-          <div className="flex justify-between border-t border-[#EFECE4] pt-4 dark:border-[#262C36]">
-            <button
-              type="button"
-              disabled={currentIdx === 0}
-              onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
-              className="rounded-lg border border-[#D8D4C8] bg-white px-4 py-2 text-xs font-semibold text-neutral-700 disabled:opacity-40 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
-            >
-              Previous
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EFECE4] pt-4 dark:border-[#262C36]">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={currentIdx === 0}
+                onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
+                className="rounded-lg border border-[#D8D4C8] bg-white px-4 py-2 text-xs font-semibold text-neutral-700 disabled:opacity-40 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+              >
+                Previous
+              </button>
+              <span className="hidden font-mono text-[11px] text-neutral-500 dark:text-neutral-400 sm:inline">
+                Keys: [ / ] nav · F flag · C calc · T tables
+              </span>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -1084,20 +1168,31 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
               {autoSyncedCount} Section A/B mock items synced to Topic Mastery, Trap Ledger &amp; 1/3/7d Mistake Bank.
             </span>
             {paper.items.some((q) => q.type === 'cr') && (
-              <button
-                type="button"
-                disabled={crSyncedToMastery}
-                onClick={handleConfirmCrMarks}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white ${
-                  crSyncedToMastery
-                    ? 'bg-emerald-700'
-                    : 'bg-[#0F5132] hover:bg-[#0B3D26] dark:bg-emerald-600'
-                }`}
-              >
-                {crSyncedToMastery
-                  ? 'CR Self-Marks Synced to Mastery ✓'
-                  : 'Confirm CR Marks & Sync Mastery'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {!crSyncedToMastery && (
+                  <button
+                    type="button"
+                    onClick={() => setReportFilter('cr')}
+                    className="rounded-lg border border-[#D8D4C8] bg-white px-3 py-1.5 text-xs font-semibold text-[#14171A] hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-neutral-200"
+                  >
+                    Self-Mark Section C CRs ({paper.items.filter((q) => q.type === 'cr').length})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={crSyncedToMastery}
+                  onClick={handleConfirmCrMarks}
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white ${
+                    crSyncedToMastery
+                      ? 'bg-emerald-700'
+                      : 'bg-[#0F5132] hover:bg-[#0B3D26] dark:bg-emerald-600'
+                  }`}
+                >
+                  {crSyncedToMastery
+                    ? 'CR Self-Marks Synced to Mastery ✓'
+                    : 'Confirm CR Marks & Sync Mastery'}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1135,9 +1230,47 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
               </button>
             ))}
           </div>
-          <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
-            Expand any item for worked solution &amp; trap debrief
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const next: Record<string, boolean> = {};
+                gradedReport.itemResults.forEach(({ q, finalScored }) => {
+                  next[q.id] = finalScored < q.marks;
+                });
+                setReportExpanded(next);
+              }}
+              className="rounded-lg border border-red-200 bg-red-50/70 px-2.5 py-1 text-xs font-semibold text-red-800 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+            >
+              Expand Missed
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const next: Record<string, boolean> = {};
+                paper.items.forEach((it) => {
+                  next[it.id] = true;
+                });
+                setReportExpanded(next);
+              }}
+              className="rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#161B22] dark:text-neutral-200"
+            >
+              Expand All
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const next: Record<string, boolean> = {};
+                paper.items.forEach((it) => {
+                  next[it.id] = false;
+                });
+                setReportExpanded(next);
+              }}
+              className="rounded-lg border border-[#D8D4C8] bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-[#303846] dark:bg-[#161B22] dark:text-neutral-200"
+            >
+              Collapse All
+            </button>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -1153,25 +1286,60 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
               const cbeAudit = q.type === 'cr' ? coachCbePresentation(rawCrText, q) : null;
               const easyAudit = q.type === 'cr' ? auditEasyMarks(rawCrText, q) : null;
               const qStepChecks = crStepChecks[q.id] ?? {};
+              const isMissedAuto = q.type !== 'cr' && finalScored < q.marks;
+              const isItemOpen =
+                reportExpanded[q.id] ??
+                (q.type === 'cr' ? !crSyncedToMastery : reportFilter === 'missed' && isMissedAuto);
+              const feedback = buildWrongAnswerFeedback(q, res, answers[q.id]);
               return (
                 <details
                   key={q.id}
-                  className="rounded-2xl border border-[#E6E4DD] bg-white p-4 dark:border-[#262C36] dark:bg-[#161B22]"
+                  open={isItemOpen}
+                  onToggle={(e) => {
+                    const nextOpen = (e.currentTarget as HTMLDetailsElement).open;
+                    setReportExpanded((prev) =>
+                      prev[q.id] === nextOpen ? prev : { ...prev, [q.id]: nextOpen }
+                    );
+                  }}
+                  className={`rounded-2xl border bg-white p-4 dark:bg-[#161B22] ${
+                    isMissedAuto
+                      ? 'border-red-200 dark:border-red-900/60'
+                      : 'border-[#E6E4DD] dark:border-[#262C36]'
+                  }`}
                 >
                   <summary className="flex cursor-pointer items-center justify-between gap-2 text-sm font-bold text-[#14171A] dark:text-[#F0F3F6]">
                     <span>
-                      <span className="font-mono text-xs text-[#0F5132] dark:text-emerald-400 mr-2">
+                      <span className="mr-2 font-mono text-xs text-[#0F5132] dark:text-emerald-400">
                         {q.id}
                       </span>
                       {q.title}
                     </span>
-                    <span className="font-mono text-xs font-bold tabular-nums">
+                    <span className="flex items-center gap-2 font-mono text-xs font-bold tabular-nums">
                       {q.type === 'cr' && !crSyncedToMastery && crSelfMarks[q.id] === undefined && (
-                        <span className="mr-2 font-sans text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                        <span className="font-sans text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                           Self-mark pending ·
                         </span>
                       )}
-                      {finalScored}/{q.marks}m · Expand
+                      {q.type !== 'cr' && (
+                        <span
+                          className={
+                            finalScored === q.marks
+                              ? 'text-[#0F5132] dark:text-emerald-400'
+                              : finalScored > 0
+                              ? 'text-amber-700 dark:text-amber-400'
+                              : 'text-red-700 dark:text-red-400'
+                          }
+                        >
+                          {finalScored === q.marks
+                            ? '✓ Correct'
+                            : finalScored > 0
+                            ? 'Partial'
+                            : '✗ Incorrect'}
+                        </span>
+                      )}
+                      <span>
+                        {finalScored}/{q.marks}m · {isItemOpen ? 'Hide' : 'Explanation'}
+                      </span>
                     </span>
                   </summary>
                   <div className="mt-3 space-y-3 border-t border-[#EFECE4] pt-3 text-xs dark:border-[#262C36]">
@@ -1268,16 +1436,73 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
                         )}
                       </div>
                     )}
-                    <p className="text-[#14171A] dark:text-neutral-200">
-                      <strong>Your Answer:</strong> {res.userDisplay} · <strong>Expected:</strong>{' '}
-                      {res.correctDisplay}
-                    </p>
+
+                    {q.type !== 'cr' && (
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div
+                          className={`rounded-xl border px-3.5 py-2.5 ${
+                            isMissedAuto
+                              ? 'border-red-200 bg-red-50/70 dark:border-red-900/50 dark:bg-red-950/20'
+                              : 'border-[#E6E4DD] bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#12161D]'
+                          }`}
+                        >
+                          <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                            Your Answer
+                          </span>
+                          <span className="mt-0.5 block font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                            {feedback.userSummary}
+                          </span>
+                        </div>
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                          <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                            Correct Answer
+                          </span>
+                          <span className="mt-0.5 block font-semibold text-[#0F5132] dark:text-emerald-200">
+                            {feedback.correctSummary}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {feedback.subFeedbacks.length > 0 && (
+                      <div className="space-y-2">
+                        {feedback.subFeedbacks
+                          .filter((sf) => !sf.correct)
+                          .map((sf) => (
+                            <div
+                              key={sf.subNum}
+                              className="space-y-2 rounded-xl border border-red-200 bg-red-50/40 p-3 dark:border-red-900/50 dark:bg-red-950/15"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] font-bold">
+                                <span className="text-red-700 dark:text-red-400">
+                                  OT {sf.subNum} (0/{sf.marks}m) · Yours: {sf.userSummary}
+                                </span>
+                                <span className="text-[#0F5132] dark:text-emerald-400">
+                                  Correct: {sf.correctSummary}
+                                </span>
+                              </div>
+                              <WorkedSolutionBlock text={sf.explanation} compact />
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
                     <div className="rounded-xl bg-[#FAF9F6] p-3.5 dark:bg-[#12161D]">
+                      <p className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                        Explanation &amp; Worked Solution
+                      </p>
                       <WorkedSolutionBlock text={q.full_worked_solution} compact />
                     </div>
-                    <p className="text-amber-900 dark:text-amber-300">
-                      <strong>Examiner Trap:</strong> {q.examiner_debrief.trap_of_question}
-                    </p>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
+                      <p>
+                        <strong>Examiner Trap:</strong> {q.examiner_debrief.trap_of_question}
+                      </p>
+                      {q.examiner_debrief.distractor_forensics && (
+                        <p className="mt-1">
+                          <strong>Distractor Check:</strong> {q.examiner_debrief.distractor_forensics}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </details>
               );
@@ -1344,15 +1569,19 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
   }
 
   if (subView === 'easy') {
+    const rapidScored = rapidItems.filter(
+      (q) => rapidAnswers[q.id] === String(q.correct_answer)
+    ).length;
+    const rapidAnsweredCount = rapidItems.filter((q) => Boolean(rapidAnswers[q.id])).length;
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between rounded-2xl border border-[#E6E4DD] bg-white p-5 dark:border-[#262C36] dark:bg-[#161B22]">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E6E4DD] bg-white p-5 dark:border-[#262C36] dark:bg-[#161B22]">
           <div>
             <h1 className="font-display text-xl font-semibold text-[#14171A] dark:text-[#F0F3F6]">
               Easy-Marks Rapid 10-Rep Drill
             </h1>
             <p className="text-xs text-neutral-600 dark:text-neutral-400">
-              10 rapid computational OTs to lock in effortless Section A marks.
+              10 rapid computational OTs to lock in effortless Section A marks ({rapidAnsweredCount}/{rapidItems.length} answered).
             </p>
           </div>
           <button
@@ -1364,50 +1593,149 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
           </button>
         </div>
 
+        {rapidSubmitted && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-5 py-4 dark:border-emerald-900/50 dark:bg-emerald-950/25">
+            <div>
+              <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                Rapid 10-Rep Result
+              </p>
+              <p className="font-display text-lg font-semibold text-[#14171A] dark:text-[#F0F3F6] tabular-nums">
+                Score: {rapidScored} / {rapidItems.length} (
+                {rapidItems.length > 0 ? Math.round((rapidScored / rapidItems.length) * 100) : 0}%)
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={startEasyRapid10}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F5132] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              New 10-Rep Sprint
+            </button>
+          </div>
+        )}
+
         <div className="space-y-3">
           {rapidItems.map((q, idx) => {
             const opts = Array.isArray(q.options) ? (q.options as McqOption[]) : [];
             const picked = rapidAnswers[q.id];
-            const isCorrect = picked === String(q.correct_answer);
+            const expectedKey = String(q.correct_answer);
+            const isCorrect = picked === expectedKey;
+            const userFull = formatRichAnswer(q.interaction, opts, picked);
+            const correctFull = formatRichAnswer(q.interaction, opts, expectedKey);
+            const showExplanation = rapidSubmitted && (!isCorrect || Boolean(rapidExpanded[q.id]));
             return (
               <div
                 key={q.id}
-                className="rounded-2xl border border-[#E6E4DD] bg-white p-5 space-y-2.5 dark:border-[#262C36] dark:bg-[#161B22]"
+                className={`rounded-2xl border bg-white p-5 space-y-3 dark:bg-[#161B22] ${
+                  rapidSubmitted && !isCorrect
+                    ? 'border-red-300 dark:border-red-900/60'
+                    : 'border-[#E6E4DD] dark:border-[#262C36]'
+                }`}
               >
-                <p className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
-                  Rep {idx + 1}/10 · {q.id} ({q.topic})
-                </p>
-                <p className="text-sm text-[#14171A] dark:text-[#F0F3F6]">
-                  {q.scenario} {q.requirement}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
+                    Rep {idx + 1}/10 · {q.id} ({q.topic})
+                  </p>
+                  {rapidSubmitted && (
+                    <span
+                      className={`font-mono text-xs font-bold ${
+                        isCorrect
+                          ? 'text-[#0F5132] dark:text-emerald-400'
+                          : 'text-red-700 dark:text-red-400'
+                      }`}
+                    >
+                      {isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                    </span>
+                  )}
+                </div>
+                {q.scenario && <ScenarioText text={q.scenario} />}
+                <p className="text-sm font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                  {q.requirement}
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {opts.map((o) => (
-                    <label
-                      key={o.key}
-                      className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] px-3 py-2 text-xs dark:border-[#262C36] dark:bg-[#12161D]"
-                    >
-                      <input
-                        type="radio"
-                        disabled={rapidSubmitted}
-                        name={`rapid-${q.id}`}
-                        checked={picked === o.key}
-                        onChange={() => setRapidAnswers((r) => ({ ...r, [q.id]: o.key }))}
-                      />
-                      <strong>{o.key}.</strong> {o.text}
-                    </label>
-                  ))}
+                  {opts.map((o) => {
+                    const isPicked = picked === o.key;
+                    const isExpectedOpt = rapidSubmitted && o.key === expectedKey;
+                    const isWrongOpt = rapidSubmitted && isPicked && !isExpectedOpt;
+                    return (
+                      <label
+                        key={o.key}
+                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs transition-colors ${
+                          isWrongOpt
+                            ? 'border-red-400 bg-red-50/75 dark:border-red-700 dark:bg-red-950/30'
+                            : isExpectedOpt
+                            ? 'border-[#0F5132] bg-emerald-50/80 dark:border-emerald-500 dark:bg-emerald-950/35'
+                            : isPicked
+                            ? 'border-[#0F5132] bg-emerald-50/70 dark:border-emerald-500 dark:bg-emerald-950/30'
+                            : 'border-[#E6E4DD] bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#12161D]'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            disabled={rapidSubmitted}
+                            name={`rapid-${q.id}`}
+                            checked={isPicked}
+                            onChange={() => setRapidAnswers((r) => ({ ...r, [q.id]: o.key }))}
+                          />
+                          <span>
+                            <strong>{o.key}.</strong> {o.text}
+                          </span>
+                        </span>
+                        {isExpectedOpt && (
+                          <span className="shrink-0 font-mono text-[10px] font-bold text-[#0F5132] dark:text-emerald-400">
+                            ✓ Answer
+                          </span>
+                        )}
+                        {isWrongOpt && (
+                          <span className="shrink-0 font-mono text-[10px] font-bold text-red-700 dark:text-red-400">
+                            ✗ Yours
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
                 </div>
                 {rapidSubmitted && (
-                  <p
-                    className={`text-xs font-semibold ${
-                      isCorrect
-                        ? 'text-[#0F5132] dark:text-emerald-400'
-                        : 'text-red-700 dark:text-red-400'
-                    }`}
-                  >
-                    {isCorrect ? '✓ Correct' : `✗ Answer is ${String(q.correct_answer)}`} ·{' '}
-                    {q.examiner_debrief.speed_trick}
-                  </p>
+                  <div className="space-y-2.5 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <p
+                        className={`font-semibold ${
+                          isCorrect
+                            ? 'text-[#0F5132] dark:text-emerald-400'
+                            : 'text-red-700 dark:text-red-400'
+                        }`}
+                      >
+                        {isCorrect
+                          ? `✓ Correct (${correctFull})`
+                          : `✗ Your answer: ${userFull} · Correct answer: ${correctFull}`}
+                      </p>
+                      {isCorrect && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setRapidExpanded((prev) => ({ ...prev, [q.id]: !prev[q.id] }))
+                          }
+                          className="font-mono text-[11px] font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+                        >
+                          {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
+                        </button>
+                      )}
+                    </div>
+
+                    {showExplanation && (
+                      <div className="space-y-2.5 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-3.5 dark:border-[#262C36] dark:bg-[#12161D]">
+                        <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                          Answer Explanation &amp; Worked Solution
+                        </p>
+                        <WorkedSolutionBlock text={q.full_worked_solution} compact />
+                        <p className="text-xs text-amber-900 dark:text-amber-300">
+                          <strong>Rule &amp; Trap:</strong> {q.examiner_debrief.trap_of_question}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -1417,7 +1745,12 @@ export const MockBuilderView: React.FC<MockBuilderViewProps> = ({
         {!rapidSubmitted && (
           <button
             type="button"
-            onClick={() => setRapidSubmitted(true)}
+            onClick={() => {
+              setRapidSubmitted(true);
+              if (typeof window !== 'undefined') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
             className="rounded-lg bg-[#0F5132] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600"
           >
             Submit Rapid 10 Reps

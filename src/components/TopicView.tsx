@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Layers, Lock, Play, Sparkles, Unlock } from 'lucide-react';
 import { TOPICS } from '../data/taxReference';
+import { formatInteractionLabel } from '../engine/mastery';
 import { generateTrapVariant } from '../engine/taxCalculators';
 import type { AppState, KitQuestion, TopicDefinition } from '../types/tx';
 
@@ -182,10 +183,25 @@ export const TopicView: React.FC<TopicViewProps> = ({
               {topic.title}
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <div className="font-mono text-xs font-semibold text-neutral-600 dark:text-neutral-300 tabular-nums">
               Examined {topic.phase1.frequencyCount}/8 sittings · {topic.phase1.kitRefs}
             </div>
+            {nextRecommendedQ && (
+              <button
+                type="button"
+                onClick={() =>
+                  onLaunchQuestion(
+                    nextRecommendedQ,
+                    nextRecommendedQ.section === 'A' ? (selectedTier === 1 ? 1 : 2) : 3
+                  )
+                }
+                className="inline-flex items-center gap-1 rounded-lg bg-[#0F5132] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
+              >
+                <Play className="h-3 w-3" />
+                Practice {nextRecommendedQ.id}
+              </button>
+            )}
             <div className="inline-flex items-center gap-1">
               <button
                 type="button"
@@ -251,7 +267,7 @@ export const TopicView: React.FC<TopicViewProps> = ({
               </div>
               <div className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
                 {topic.phase1.keyNumbers.map((kn, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
+                  <div key={i} className="tax-study-row flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
                     <div>
                       <span className="font-semibold text-[#14171A] dark:text-[#F0F3F6]">{kn.label}</span>
                       {kn.note && (
@@ -391,23 +407,23 @@ export const TopicView: React.FC<TopicViewProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-[#E6E4DD] dark:border-[#262C36]">
-            <table className="min-w-full divide-y divide-[#EFECE4] text-left text-sm dark:divide-[#262C36]">
+            <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
               <thead>
                 <tr className="bg-[#FAF9F6] text-xs font-semibold text-neutral-600 dark:bg-[#12161D] dark:text-neutral-400">
-                  <th className="px-4 py-3">Kit ID &amp; Title</th>
-                  <th className="px-4 py-3">Section</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Marks &amp; Pace</th>
-                  <th className="px-4 py-3">Citation</th>
-                  <th className="px-4 py-3">Last</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  <th className="border-b border-[#EFECE4] px-4 py-3 dark:border-[#262C36]">Kit ID &amp; Title</th>
+                  <th className="border-b border-[#EFECE4] px-4 py-3 dark:border-[#262C36]">Section</th>
+                  <th className="border-b border-[#EFECE4] px-4 py-3 dark:border-[#262C36]">Type</th>
+                  <th className="border-b border-[#EFECE4] px-4 py-3 dark:border-[#262C36]">Marks &amp; Pace</th>
+                  <th className="border-b border-[#EFECE4] px-4 py-3 dark:border-[#262C36]">Citation</th>
+                  <th className="border-b border-[#EFECE4] px-4 py-3 dark:border-[#262C36]">Last</th>
+                  <th className="border-b border-[#EFECE4] px-4 py-3 text-right dark:border-[#262C36]">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#EFECE4] dark:divide-[#262C36]">
+              <tbody className="[&>tr:not(:first-child)>td]:border-t [&>tr:not(:first-child)>td]:border-[#EFECE4] dark:[&>tr:not(:first-child)>td]:border-[#262C36]">
                 {tierFiltered.map((q) => {
                   const last = attemptCountByQ.get(q.id);
                   return (
-                    <tr key={q.id} className="hover:bg-[#FAF9F6] dark:hover:bg-[#1C222B]">
+                    <tr key={q.id} className="tax-study-row group">
                       <td className="px-4 py-3 font-medium text-[#14171A] dark:text-[#F0F3F6]">
                         <span className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400 mr-2">
                           {q.id}
@@ -417,8 +433,8 @@ export const TopicView: React.FC<TopicViewProps> = ({
                       <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-300">
                         Sec {q.section}
                       </td>
-                      <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">
-                        {q.interaction.replace('_', ' ')}
+                      <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300 whitespace-nowrap">
+                        {formatInteractionLabel(q.interaction)}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs font-semibold text-[#14171A] dark:text-[#F0F3F6] tabular-nums">
                         {q.marks}m ({Math.round(q.marks * 1.8)}m)
@@ -433,7 +449,7 @@ export const TopicView: React.FC<TopicViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onLaunchQuestion(q, selectedTier)}
-                          className="rounded-lg bg-[#0F5132] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                          className="rounded-lg bg-[#0F5132] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0B3D26] dark:bg-emerald-600 dark:hover:bg-emerald-500"
                         >
                           Practice →
                         </button>

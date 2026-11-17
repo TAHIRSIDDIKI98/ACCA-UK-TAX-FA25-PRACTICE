@@ -25,8 +25,11 @@ import {
 import { TOPICS } from '../data/taxReference';
 import {
   auditEasyMarks,
+  buildWrongAnswerFeedback,
   coachCbePresentation,
+  formatRichAnswer,
   gradeQuestion,
+  gradeSubItem,
   type GradedResult,
   type UserQuestionAnswer,
 } from '../engine/scoring';
@@ -120,6 +123,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
   const [aiLoading, setAiLoading] = useState(false);
   const [cbeCheckerOpen, setCbeCheckerOpen] = useState(true);
   const [crScoreConfirmed, setCrScoreConfirmed] = useState(false);
+  const feedbackRef = React.useRef<HTMLElement | null>(null);
 
   // Slide-out Bank Queue Drawer state (keeps player viewport clean & focused)
   const [queueOpen, setQueueOpen] = useState(false);
@@ -284,7 +288,16 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
 
   const handleSubmit = (skipReveal = false) => {
     const elapsed = Math.max(1, budgetSeconds - secondsLeft);
-    const result = gradeQuestion(question, skipReveal ? null : answer);
+    const activeAns = skipReveal ? null : answer;
+    const result = gradeQuestion(question, activeAns);
+    const richUserSummary =
+      question.type === 'cr' || question.type === 'case'
+        ? result.userDisplay
+        : formatRichAnswer(question.interaction, question.options, activeAns);
+    const richCorrectSummary =
+      question.type === 'cr' || question.type === 'case'
+        ? result.correctDisplay
+        : formatRichAnswer(question.interaction, question.options, question.correct_answer);
     const easyAudit =
       question.type === 'cr' && typeof answer === 'string'
         ? auditEasyMarks(answer, question)
@@ -302,6 +315,12 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     setTimerRunning(false);
     setCrScoreConfirmed(false);
 
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+
     if (question.type === 'cr' && !skipReveal) {
       return;
     }
@@ -313,8 +332,8 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
       marksAvailable: question.marks,
       freeMarksCaptured: easyAudit.capturedCount,
       freeMarksTotal: easyAudit.totalChecks,
-      userAnswerSummary: skipReveal ? 'Skipped / Revealed' : result.userDisplay,
-      correctAnswerSummary: result.correctDisplay,
+      userAnswerSummary: skipReveal ? 'Skipped / Revealed' : richUserSummary,
+      correctAnswerSummary: richCorrectSummary,
       elapsedSeconds: elapsed,
     });
 
@@ -389,15 +408,27 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     val: unknown,
     onChange: (nextVal: UserQuestionAnswer) => void,
     prefixKey: string,
-    onEnterSubmit?: () => void
+    onEnterSubmit?: () => void,
+    revealExpected?: unknown
   ) => {
+    const hasReveal = locked && revealExpected !== undefined;
+
     if (interaction === 'numeric_input') {
+      const subGrade = hasReveal ? gradeSubItem('numeric_input', revealExpected, val) : null;
       return (
-        <div className="max-w-xs">
+        <div className="max-w-sm space-y-2">
           <label className="mb-1.5 block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
             Enter whole £ figure (no commas needed):
           </label>
-          <div className="flex items-center rounded-xl border border-[#D8D4C8] bg-white focus-within:border-[#0F5132] dark:border-[#303846] dark:bg-[#12161D] dark:focus-within:border-emerald-500">
+          <div
+            className={`flex items-center rounded-xl border bg-white dark:bg-[#12161D] ${
+              subGrade
+                ? subGrade.correct
+                  ? 'border-[#0F5132] ring-1 ring-emerald-500/30 dark:border-emerald-500'
+                  : 'border-red-400 ring-1 ring-red-500/20 dark:border-red-700'
+                : 'border-[#D8D4C8] focus-within:border-[#0F5132] dark:border-[#303846] dark:focus-within:border-emerald-500'
+            }`}
+          >
             <span className="border-r border-[#E6E4DD] bg-[#FAF9F6] px-3.5 py-2.5 font-mono text-sm font-bold text-neutral-700 dark:border-[#262C36] dark:bg-[#1C222B] dark:text-neutral-200">
               £
             </span>
@@ -414,9 +445,14 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 }
               }}
               placeholder="e.g. 7420"
-              className="w-full bg-transparent px-3.5 py-2.5 font-mono text-sm font-semibold text-[#14171A] focus:outline-none disabled:opacity-70 dark:text-[#F0F3F6]"
+              className="w-full bg-transparent px-3.5 py-2.5 font-mono text-sm font-semibold text-[#14171A] focus:outline-none disabled:opacity-80 dark:text-[#F0F3F6]"
             />
           </div>
+          {subGrade && !subGrade.correct && (
+            <p className="font-mono text-xs font-semibold text-[#0F5132] dark:text-emerald-400">
+              ✓ Correct Answer: {subGrade.expectedDisplay}
+            </p>
+          )}
         </div>
       );
     }
@@ -426,6 +462,10 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
       const curObj = (val && typeof val === 'object' && !Array.isArray(val)
         ? val
         : {}) as Record<string, string[]>;
+      const expObj = (hasReveal && revealExpected && typeof revealExpected === 'object' && !Array.isArray(revealExpected)
+        ? revealExpected
+        : null) as Record<string, string[]> | null;
+
       return (
         <div className="overflow-x-auto rounded-xl border border-[#E6E4DD] dark:border-[#262C36]">
           <table className="min-w-full divide-y divide-[#EFECE4] text-xs dark:divide-[#262C36]">
@@ -437,23 +477,47 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                     {col}
                   </th>
                 ))}
+                {expObj && <th className="px-3.5 py-2.5 text-left">Result</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EFECE4] bg-white dark:divide-[#262C36] dark:bg-[#161B22]">
               {mat.rows.map((rowText, rIdx) => {
                 const rowKey = String(rIdx);
                 const selectedCols = curObj[rowKey] ?? [];
+                const expectedCols = expObj ? expObj[rowKey] ?? [] : null;
+                const rowOk =
+                  expectedCols !== null &&
+                  expectedCols.length === selectedCols.length &&
+                  expectedCols.every((c) => selectedCols.includes(c));
                 return (
-                  <tr key={rIdx}>
+                  <tr
+                    key={rIdx}
+                    className={
+                      expectedCols
+                        ? rowOk
+                          ? 'bg-emerald-50/40 dark:bg-emerald-950/15'
+                          : 'bg-red-50/40 dark:bg-red-950/15'
+                        : undefined
+                    }
+                  >
                     <td className="px-3.5 py-3 font-medium text-[#14171A] dark:text-[#F0F3F6]">
                       {rowText}
                     </td>
                     {mat.columns.map((col, cIdx) => {
                       const checked = selectedCols.includes(col);
+                      const isExpCell = expectedCols?.includes(col) ?? false;
                       return (
-                        <td key={cIdx} className="px-3.5 py-3 text-center">
+                        <td
+                          key={cIdx}
+                          className={`px-3.5 py-3 text-center ${
+                            expectedCols && isExpCell
+                              ? 'bg-emerald-50/70 dark:bg-emerald-950/30'
+                              : ''
+                          }`}
+                        >
                           <input
                             type="checkbox"
+                            aria-label={`${rowText} — ${col}`}
                             disabled={locked}
                             checked={checked}
                             onChange={() => {
@@ -467,6 +531,17 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                         </td>
                       );
                     })}
+                    {expectedCols && (
+                      <td className="px-3.5 py-3 font-mono text-[11px] font-semibold">
+                        {rowOk ? (
+                          <span className="text-[#0F5132] dark:text-emerald-400">✓ Correct</span>
+                        ) : (
+                          <span className="text-red-700 dark:text-red-400">
+                            ✗ Ans: {expectedCols.join(', ') || 'None'}
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -479,35 +554,56 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     if (interaction === 'pair_dropdown') {
       const groups = options as PairDropdownGroup[];
       const curArr = Array.isArray(val) ? (val as string[]) : [];
+      const expArr = hasReveal && Array.isArray(revealExpected) ? (revealExpected as string[]) : null;
       return (
         <div className="space-y-3">
-          {groups.map((grp, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col gap-2 rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-3.5 sm:flex-row sm:items-center sm:justify-between dark:border-[#262C36] dark:bg-[#12161D]"
-            >
-              <span className="text-xs font-semibold text-[#14171A] dark:text-[#F0F3F6]">
-                {grp.group}
-              </span>
-              <select
-                disabled={locked}
-                value={curArr[idx] ?? ''}
-                onChange={(e) => {
-                  const next = [...curArr];
-                  next[idx] = e.target.value;
-                  onChange(next);
-                }}
-                className="rounded-lg border border-[#D8D4C8] bg-white px-3 py-2 text-xs font-medium text-[#14171A] dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6]"
+          {groups.map((grp, idx) => {
+            const chosen = curArr[idx] ?? '';
+            const expectedChoice = expArr?.[idx];
+            const isRowOk =
+              expectedChoice !== undefined &&
+              chosen.trim().toLowerCase() === expectedChoice.trim().toLowerCase();
+            return (
+              <div
+                key={idx}
+                className={`space-y-1.5 rounded-xl border p-3.5 ${
+                  expArr
+                    ? isRowOk
+                      ? 'border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20'
+                      : 'border-red-300 bg-red-50/50 dark:border-red-900/60 dark:bg-red-950/20'
+                    : 'border-[#E6E4DD] bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#12161D]'
+                }`}
               >
-                <option value="">Select option...</option>
-                {grp.choices.map((ch, cIdx) => (
-                  <option key={cIdx} value={ch}>
-                    {ch}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs font-semibold text-[#14171A] dark:text-[#F0F3F6]">
+                    {grp.group}
+                  </span>
+                  <select
+                    disabled={locked}
+                    value={chosen}
+                    onChange={(e) => {
+                      const next = [...curArr];
+                      next[idx] = e.target.value;
+                      onChange(next);
+                    }}
+                    className="rounded-lg border border-[#D8D4C8] bg-white px-3 py-2 text-xs font-medium text-[#14171A] dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6]"
+                  >
+                    <option value="">Select option...</option>
+                    {grp.choices.map((ch, cIdx) => (
+                      <option key={cIdx} value={ch}>
+                        {ch}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {expArr && !isRowOk && (
+                  <p className="font-mono text-[11px] font-semibold text-[#0F5132] dark:text-emerald-400">
+                    ✓ Correct choice: {expectedChoice}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -515,6 +611,7 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
     if (interaction === 'multi_select') {
       const opts = options as McqOption[];
       const curArr = Array.isArray(val) ? (val as string[]) : [];
+      const expArr = hasReveal && Array.isArray(revealExpected) ? (revealExpected as string[]) : null;
       return (
         <div className="space-y-2.5">
           <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
@@ -522,33 +619,52 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
           </p>
           {opts.map((opt) => {
             const checked = curArr.includes(opt.key);
+            const isExpected = expArr ? expArr.includes(opt.key) : false;
+            const isWrongPick = Boolean(expArr && checked && !isExpected);
+            const isCorrectReveal = Boolean(expArr && isExpected);
             return (
               <label
                 key={`${prefixKey}-${opt.key}`}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
-                  checked
+                className={`flex cursor-pointer items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
+                  isWrongPick
+                    ? 'border-red-400 bg-red-50/70 dark:border-red-700 dark:bg-red-950/30'
+                    : isCorrectReveal
+                    ? 'border-[#0F5132] bg-emerald-50/80 dark:border-emerald-500 dark:bg-emerald-950/35'
+                    : checked
                     ? 'border-[#0F5132] bg-emerald-50/70 dark:border-emerald-500 dark:bg-emerald-950/30'
                     : 'border-[#E6E4DD] bg-white hover:bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:bg-[#1C222B]'
                 }`}
               >
-                <input
-                  type="checkbox"
-                  disabled={locked}
-                  checked={checked}
-                  onChange={() => {
-                    const next = checked
-                      ? curArr.filter((k) => k !== opt.key)
-                      : [...curArr, opt.key];
-                    onChange(next);
-                  }}
-                  className="mt-1 h-4 w-4 rounded border-neutral-300 text-[#0F5132]"
-                />
-                <span>
-                  <span className="font-mono text-xs font-bold text-neutral-500 dark:text-neutral-400 mr-2">
-                    {opt.key}.
+                <span className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    disabled={locked}
+                    checked={checked}
+                    onChange={() => {
+                      const next = checked
+                        ? curArr.filter((k) => k !== opt.key)
+                        : [...curArr, opt.key];
+                      onChange(next);
+                    }}
+                    className="mt-1 h-4 w-4 rounded border-neutral-300 text-[#0F5132]"
+                  />
+                  <span>
+                    <span className="mr-2 font-mono text-xs font-bold text-neutral-500 dark:text-neutral-400">
+                      {opt.key}.
+                    </span>
+                    <span className="text-[#14171A] dark:text-[#F0F3F6]">{opt.text}</span>
                   </span>
-                  <span className="text-[#14171A] dark:text-[#F0F3F6]">{opt.text}</span>
                 </span>
+                {isCorrectReveal && (
+                  <span className="shrink-0 font-mono text-[11px] font-bold text-[#0F5132] dark:text-emerald-400">
+                    ✓ Correct
+                  </span>
+                )}
+                {isWrongPick && (
+                  <span className="shrink-0 font-mono text-[11px] font-bold text-red-700 dark:text-red-400">
+                    ✗ Your pick
+                  </span>
+                )}
               </label>
             );
           })}
@@ -558,33 +674,52 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
 
     const opts = Array.isArray(options) ? (options as McqOption[]) : [];
     const curVal = typeof val === 'string' ? val : '';
+    const expKey = hasReveal ? String(revealExpected ?? '').trim().toUpperCase() : null;
     return (
       <div className="space-y-2.5">
         {opts.map((opt) => {
           const selected = curVal === opt.key;
+          const isCorrectReveal = Boolean(expKey && opt.key.toUpperCase() === expKey);
+          const isWrongPick = Boolean(expKey && selected && !isCorrectReveal);
           return (
             <label
               key={`${prefixKey}-${opt.key}`}
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
-                selected
+              className={`flex cursor-pointer items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
+                isWrongPick
+                  ? 'border-red-400 bg-red-50/75 dark:border-red-700 dark:bg-red-950/30'
+                  : isCorrectReveal
+                  ? 'border-[#0F5132] bg-emerald-50/80 dark:border-emerald-500 dark:bg-emerald-950/35'
+                  : selected
                   ? 'border-[#0F5132] bg-emerald-50/70 dark:border-emerald-500 dark:bg-emerald-950/30'
                   : 'border-[#E6E4DD] bg-white hover:bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#161B22] dark:hover:bg-[#1C222B]'
               }`}
             >
-              <input
-                type="radio"
-                name={`radio-${prefixKey}`}
-                disabled={locked}
-                checked={selected}
-                onChange={() => onChange(opt.key)}
-                className="mt-1 h-4 w-4 border-neutral-300 text-[#0F5132]"
-              />
-              <span>
-                <span className="font-mono text-xs font-bold text-neutral-500 dark:text-neutral-400 mr-2">
-                  {opt.key}.
+              <span className="flex items-start gap-3">
+                <input
+                  type="radio"
+                  name={`radio-${prefixKey}`}
+                  disabled={locked}
+                  checked={selected}
+                  onChange={() => onChange(opt.key)}
+                  className="mt-1 h-4 w-4 border-neutral-300 text-[#0F5132]"
+                />
+                <span>
+                  <span className="mr-2 font-mono text-xs font-bold text-neutral-500 dark:text-neutral-400">
+                    {opt.key}.
+                  </span>
+                  <span className="text-[#14171A] dark:text-[#F0F3F6]">{opt.text}</span>
                 </span>
-                <span className="text-[#14171A] dark:text-[#F0F3F6]">{opt.text}</span>
               </span>
+              {isCorrectReveal && (
+                <span className="shrink-0 font-mono text-[11px] font-bold text-[#0F5132] dark:text-emerald-400">
+                  ✓ Correct Answer
+                </span>
+              )}
+              {isWrongPick && (
+                <span className="shrink-0 font-mono text-[11px] font-bold text-red-700 dark:text-red-400">
+                  ✗ Your Choice
+                </span>
+              )}
             </label>
           );
         })}
@@ -609,7 +744,15 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
 
   return (
     <div className="space-y-5">
-      <TaxTablesDrawer open={tablesOpen} onClose={() => setTablesOpen(false)} />
+      <TaxTablesDrawer
+        open={tablesOpen}
+        onClose={() => setTablesOpen(false)}
+        onOpenQuestionById={(qId) => {
+          setTablesOpen(false);
+          const found = allQuestions.find((q) => q.id === qId);
+          if (found) onSelectQuestion(found);
+        }}
+      />
 
       {/* Slide-out Question Queue Drawer */}
       {queueOpen && (
@@ -1029,15 +1172,41 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 })()}
                 {(question.options as CaseSubQuestion[]).map((sq, idx) => {
                   const arr = Array.isArray(answer) ? answer : [];
+                  const subRes = locked && graded?.subResults ? graded.subResults[idx] : null;
+                  const subCorrectFull = locked
+                    ? formatRichAnswer(sq.interaction, sq.options, sq.correct_answer)
+                    : '';
+                  const subUserFull = locked
+                    ? formatRichAnswer(sq.interaction, sq.options, arr[idx])
+                    : '';
                   return (
                     <div
                       id={`player-ot-${sq.sub_num}`}
                       key={sq.sub_num}
-                      className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]"
+                      className={`rounded-xl border p-4 space-y-3 ${
+                        subRes
+                          ? subRes.correct
+                            ? 'border-emerald-200 bg-[#FAF9F6] dark:border-emerald-900/60 dark:bg-[#12161D]'
+                            : 'border-red-300 bg-red-50/30 dark:border-red-900/60 dark:bg-red-950/15'
+                          : 'border-[#E6E4DD] bg-[#FAF9F6] dark:border-[#262C36] dark:bg-[#12161D]'
+                      }`}
                     >
-                      <span className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
-                        OT {sq.sub_num} ({sq.marks} marks)
-                      </span>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-bold text-[#0F5132] dark:text-emerald-400">
+                          OT {sq.sub_num} ({sq.marks} marks)
+                        </span>
+                        {subRes && (
+                          <span
+                            className={`font-mono text-xs font-bold ${
+                              subRes.correct
+                                ? 'text-[#0F5132] dark:text-emerald-400'
+                                : 'text-red-700 dark:text-red-400'
+                            }`}
+                          >
+                            {subRes.correct ? `✓ ${sq.marks}/${sq.marks} Correct` : `✗ 0/${sq.marks} Incorrect`}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm font-medium text-[#14171A] whitespace-pre-line dark:text-[#F0F3F6]">
                         {sq.prompt}
                       </p>
@@ -1050,7 +1219,37 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                           next[idx] = subVal as string | string[] | Record<string, string[]>;
                           setAnswer(next);
                         },
-                        `case-${question.id}-${idx}`
+                        `case-${question.id}-${idx}`,
+                        undefined,
+                        locked ? sq.correct_answer : undefined
+                      )}
+                      {subRes && !subRes.correct && (
+                        <div className="mt-2 space-y-2.5 rounded-xl border border-red-200 bg-white p-3.5 dark:border-red-900/50 dark:bg-[#161B22]">
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs">
+                            <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2 dark:border-red-900/50 dark:bg-red-950/25">
+                              <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400">
+                                Your Answer
+                              </span>
+                              <span className="mt-0.5 block font-semibold text-red-950 dark:text-red-100">
+                                {subUserFull}
+                              </span>
+                            </div>
+                            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 dark:border-emerald-900/50 dark:bg-emerald-950/25">
+                              <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                                Correct Answer
+                              </span>
+                              <span className="mt-0.5 block font-semibold text-emerald-950 dark:text-emerald-100">
+                                {subCorrectFull}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="mb-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#14171A] dark:text-neutral-300">
+                              OT {sq.sub_num} Worked Explanation
+                            </p>
+                            <WorkedSolutionBlock text={sq.worked_solution} compact />
+                          </div>
+                        </div>
                       )}
                     </div>
                   );
@@ -1201,7 +1400,8 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 answer,
                 (v) => setAnswer(v),
                 `single-${question.id}`,
-                () => handleSubmit(false)
+                () => handleSubmit(false),
+                locked ? question.correct_answer : undefined
               )
             )}
 
@@ -1255,8 +1455,11 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
       </div>
 
       {/* PHASE 3: Locked Solution + Mark Scheme + Examiner Debrief (A–F) */}
-      {locked && graded && (
-        <section className="space-y-5">
+      {locked && graded && (() => {
+        const wrongFeedback = buildWrongAnswerFeedback(question, graded, answer);
+        const isWrongOrPartialAuto = wrongFeedback.isWrongOrPartial;
+        return (
+        <section ref={feedbackRef} className="space-y-5">
           {microDrillAlert && (
             <div className="flex flex-col gap-3 rounded-2xl border border-red-300 bg-red-50/90 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-red-900 dark:bg-red-950/30">
               <div className="flex items-start gap-2.5">
@@ -1280,8 +1483,14 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
             </div>
           )}
 
-          {/* Verdict & Mark Scheme */}
-          <div className="rounded-2xl border border-[#E6E4DD] bg-white p-6 space-y-5 dark:border-[#262C36] dark:bg-[#161B22]">
+          {/* Verdict, Answer & Explanation, and Mark Scheme */}
+          <div
+            className={`rounded-2xl border bg-white p-6 space-y-5 dark:bg-[#161B22] ${
+              isWrongOrPartialAuto
+                ? 'border-red-300 dark:border-red-900/70'
+                : 'border-[#E6E4DD] dark:border-[#262C36]'
+            }`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EFECE4] pb-4 dark:border-[#262C36]">
               <div className="flex items-center gap-3">
                 {graded.isAutoGraded ? (
@@ -1299,15 +1508,27 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                       ? graded.isFullyCorrect
                         ? 'Full Marks Earned'
                         : graded.marksScored > 0
-                        ? 'Partial Marks Earned'
-                        : 'Incorrect — Review Worked Solution & Trap Debrief'
+                        ? 'Partial Marks Earned — Answer & Explanation Below'
+                        : 'Incorrect — Correct Answer & Explanation'
                       : 'Self-Mark Against Official ACCA Mark Scheme'}
                   </h2>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                    Your response: <span className="font-mono font-semibold">{graded.userDisplay}</span> · Correct:{' '}
-                    <span className="font-mono font-semibold text-[#0F5132] dark:text-emerald-400">
-                      {graded.correctDisplay}
-                    </span>
+                    {question.type === 'cr' ? (
+                      <>
+                        Your response: <span className="font-mono font-semibold">{graded.userDisplay}</span>
+                      </>
+                    ) : question.type === 'case' ? (
+                      <>
+                        {graded.subResults?.filter((s) => s.correct).length ?? 0} of 5 Objective Test questions correct — see per-OT answers &amp; explanations below
+                      </>
+                    ) : (
+                      <>
+                        Your answer: <span className="font-semibold">{wrongFeedback.userSummary}</span> · Correct:{' '}
+                        <span className="font-semibold text-[#0F5132] dark:text-emerald-400">
+                          {wrongFeedback.correctSummary}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1329,22 +1550,147 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
 
             {graded.subResults && (
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-5">
-                {graded.subResults.map((sr) => (
-                  <div
-                    key={sr.subNum}
-                    className={`rounded-xl border p-3 text-xs ${
-                      sr.correct
-                        ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100'
-                        : 'border-red-200 bg-red-50/70 text-red-950 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100'
-                    }`}
-                  >
-                    <p className="font-mono font-bold">
-                      OT {sr.subNum} · {sr.correct ? '2/2' : '0/2'}
+                {graded.subResults.map((sr, sIdx) => {
+                  const subFb = wrongFeedback.subFeedbacks[sIdx];
+                  return (
+                    <button
+                      type="button"
+                      key={sr.subNum}
+                      onClick={() =>
+                        document
+                          .getElementById(`player-ot-${sr.subNum}`)
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }
+                      className={`rounded-xl border p-3 text-left text-xs transition-colors hover:brightness-95 ${
+                        sr.correct
+                          ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100'
+                          : 'border-red-200 bg-red-50/70 text-red-950 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100'
+                      }`}
+                    >
+                      <p className="font-mono font-bold">
+                        OT {sr.subNum} · {sr.correct ? '2/2 ✓' : '0/2 ✗'}
+                      </p>
+                      <p className="mt-1 line-clamp-2" title={subFb ? subFb.userSummary : sr.user}>
+                        Yours: {subFb ? subFb.userSummary : sr.user}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 font-semibold" title={subFb ? subFb.correctSummary : sr.expected}>
+                        Ans: {subFb ? subFb.correctSummary : sr.expected}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Immediate Answer & Explanation Block on Wrong/Partial Auto-Graded Questions */}
+            {isWrongOrPartialAuto && (
+              <div
+                data-testid="wrong-answer-explanation"
+                className="space-y-4 rounded-xl border border-red-200 bg-red-50/40 p-4 sm:p-5 dark:border-red-900/50 dark:bg-red-950/15"
+              >
+                {wrongFeedback.subFeedbacks.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-red-800 dark:text-red-300">
+                      Missed Objective Test Answers &amp; Explanations
                     </p>
-                    <p className="mt-1">Yours: {sr.user}</p>
-                    <p>Ans: {sr.expected}</p>
+                    {wrongFeedback.subFeedbacks
+                      .filter((s) => !s.correct)
+                      .map((subFb) => (
+                        <div
+                          key={subFb.subNum}
+                          className="space-y-2.5 rounded-xl border border-red-200 bg-white p-3.5 dark:border-red-900/50 dark:bg-[#161B22]"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-mono text-xs font-bold text-red-700 dark:text-red-400">
+                              OT {subFb.subNum} · Incorrect (0/{subFb.marks})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                document
+                                  .getElementById(`player-ot-${subFb.subNum}`)
+                                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                              }
+                              className="font-mono text-[11px] font-semibold text-[#0F5132] hover:underline dark:text-emerald-400"
+                            >
+                              View OT {subFb.subNum} Question ↑
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs">
+                            <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2 dark:border-red-900/50 dark:bg-red-950/25">
+                              <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400">
+                                Your Answer
+                              </span>
+                              <span className="mt-0.5 block font-semibold text-red-950 dark:text-red-100">
+                                {subFb.userSummary}
+                              </span>
+                            </div>
+                            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 dark:border-emerald-900/50 dark:bg-emerald-950/25">
+                              <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                                Correct Answer
+                              </span>
+                              <span className="mt-0.5 block font-semibold text-emerald-950 dark:text-emerald-100">
+                                {subFb.correctSummary}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-[#14171A] dark:text-neutral-300">
+                              OT {subFb.subNum} Worked Explanation
+                            </p>
+                            <WorkedSolutionBlock text={subFb.explanation} compact />
+                          </div>
+                        </div>
+                      ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
+                    <div className="rounded-xl border border-red-200 bg-white px-4 py-3 dark:border-red-900/50 dark:bg-[#161B22]">
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400">
+                        Your Answer
+                      </p>
+                      <p className="mt-1 font-semibold text-red-950 dark:text-red-200">
+                        {wrongFeedback.userSummary}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-emerald-300 bg-white px-4 py-3 dark:border-emerald-800 dark:bg-[#161B22]">
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                        Correct Answer
+                      </p>
+                      <p className="mt-1 font-semibold text-[#0F5132] dark:text-emerald-200">
+                        {wrongFeedback.correctSummary}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-[#E6E4DD] bg-white p-4 space-y-2.5 dark:border-[#262C36] dark:bg-[#161B22]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#0F5132] dark:text-emerald-400">
+                      {wrongFeedback.subFeedbacks.length > 0
+                        ? `Full Case Worked Solution (Kit ${question.answer_page})`
+                        : `Explanation & Worked Solution (Kit ${question.answer_page})`}
+                    </h3>
+                    <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {question.kit_page} · {question.st_chapter}
+                    </span>
+                  </div>
+                  <WorkedSolutionBlock text={wrongFeedback.explanation} />
+                </div>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-xs leading-relaxed dark:border-amber-900/50 dark:bg-amber-950/20">
+                  <p className="font-bold text-amber-950 dark:text-amber-200">
+                    Why This Happens — {question.examiner_debrief.trap_category}
+                  </p>
+                  <p className="mt-1 text-neutral-800 dark:text-neutral-200">
+                    {wrongFeedback.trapNote}
+                  </p>
+                  {wrongFeedback.distractorNote && (
+                    <p className="mt-1 text-neutral-700 dark:text-neutral-300">
+                      <strong>Distractor Check:</strong> {wrongFeedback.distractorNote}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1353,32 +1699,44 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
                 <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
                   Step-by-Step ACCA Mark Scheme
                 </h3>
-                {question.type === 'cr' && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={crScoreConfirmed}
-                      onClick={handleApplySelfMarkToProgress}
-                      className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white ${
-                        crScoreConfirmed
-                          ? 'bg-emerald-700'
-                          : 'bg-[#0F5132] hover:bg-[#0B3D26] dark:bg-emerald-600'
-                      }`}
-                    >
-                      {crScoreConfirmed
-                        ? `Score Confirmed (${selfMarkedScore}/${question.marks})`
-                        : `Confirm Self-Marked Score (${selfMarkedScore}/${question.marks})`}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={aiLoading}
-                      onClick={handleRequestAiFeedback}
-                      className="rounded-lg border border-[#D8D4C8] bg-white px-3 py-1.5 text-xs font-semibold text-[#14171A] hover:bg-neutral-50 disabled:opacity-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6]"
-                    >
-                      {aiLoading ? 'Reviewing...' : 'AI Examiner Critique'}
-                    </button>
-                  </div>
-                )}
+                {question.type === 'cr' && (() => {
+                  const hasCrWorking = typeof answer === 'string' && answer.trim().length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={crScoreConfirmed}
+                        onClick={handleApplySelfMarkToProgress}
+                        className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white ${
+                          crScoreConfirmed
+                            ? 'bg-emerald-700'
+                            : 'bg-[#0F5132] hover:bg-[#0B3D26] dark:bg-emerald-600'
+                        }`}
+                      >
+                        {crScoreConfirmed
+                          ? `Score Confirmed (${selfMarkedScore}/${question.marks})`
+                          : `Confirm Self-Marked Score (${selfMarkedScore}/${question.marks})`}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={aiLoading || !hasCrWorking}
+                        title={
+                          hasCrWorking
+                            ? 'Request Gemini AI Examiner Critique of your response'
+                            : 'Click Retry Question and enter a written response to enable AI Critique'
+                        }
+                        onClick={handleRequestAiFeedback}
+                        className="rounded-lg border border-[#D8D4C8] bg-white px-3 py-1.5 text-xs font-semibold text-[#14171A] hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#303846] dark:bg-[#1C222B] dark:text-[#F0F3F6]"
+                      >
+                        {aiLoading
+                          ? 'Reviewing...'
+                          : hasCrWorking
+                          ? 'AI Examiner Critique'
+                          : 'AI Critique (Enter Working First)'}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="divide-y divide-[#EFECE4] rounded-xl border border-[#E6E4DD] dark:divide-[#262C36] dark:border-[#262C36]">
@@ -1470,17 +1828,19 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
               </div>
             )}
 
-            <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#14171A] dark:text-[#F0F3F6]">
-                  Full Worked Solution (Kit {question.answer_page})
-                </h3>
-                <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                  {question.kit_page} · {question.st_chapter}
-                </span>
+            {!isWrongOrPartialAuto && (
+              <div className="rounded-xl border border-[#E6E4DD] bg-[#FAF9F6] p-4 space-y-3 dark:border-[#262C36] dark:bg-[#12161D]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#14171A] dark:text-[#F0F3F6]">
+                    Full Worked Solution (Kit {question.answer_page})
+                  </h3>
+                  <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
+                    {question.kit_page} · {question.st_chapter}
+                  </span>
+                </div>
+                <WorkedSolutionBlock text={question.full_worked_solution} />
               </div>
-              <WorkedSolutionBlock text={question.full_worked_solution} />
-            </div>
+            )}
           </div>
 
           {/* A–F Examiner Forensic Debrief */}
@@ -1563,7 +1923,8 @@ export const QuestionPlayer: React.FC<QuestionPlayerProps> = ({
             </div>
           </div>
         </section>
-      )}
+        );
+      })()}
     </div>
   );
 };
